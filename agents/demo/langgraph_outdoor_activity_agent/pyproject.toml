@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "langgraph_outdoor_activity_agent"
+version = "0.1.0"
+description = "An outdoor activity planning agent that recommends the best day and time for outdoor activities using weather, air quality, daylight, and National Park Service data."
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+packages = [
+    { include = "langgraph_outdoor_activity_agent", from = "src" }
+]
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<=3.13"
+# NOTE: If using Python 3.14+, change the above to: python = ">=3.10"
+fastapi = ">=0.115.0"
+uvicorn = {extras = ["standard"], version = ">=0.41.0"}
+pydantic = ">=2.0.0"
+langchain = ">=1.2.7"
+langchain-core = ">=1.2.7"
+langchain-openai = ">=1.1.7"
+langgraph = ">=1.0.7"
+langgraph-prebuilt = ">=1.0.0"
+llama-stack = ">=0.5.0"
+llama-stack-client = ">=0.5.0"
+ollama = ">=0.4.0"
+openai = ">=1.109.1"
+setuptools = "69.5.1"
+milvus-lite = "2.5.1"
+pymilvus = "2.6.9"
+python-dotenv = ">=1.0.0"
+pytest = "^8.3.3"
+httpx = ">=0.27.0"
+
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+
+[tool.poetry.group.eval.dependencies]
+unitxt = "^1.24.0"
+datasets = "3.6.0"
+nltk = "^3.9.1"
+rouge-score = "^0.1.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

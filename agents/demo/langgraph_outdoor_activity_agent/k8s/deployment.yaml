@@ -1,0 +1,74 @@
+# Deployment for LangGraph Outdoor Activity Agent
+#
+# Deploy using environment variables:
+# 1. Secret for API_KEY and NPS_API_KEY (required):
+#    oc create secret generic langgraph-outdoor-activity-agent-secrets \
+#      --from-literal=api-key='YOUR_API_KEY_HERE' \
+#      --from-literal=nps-api-key='YOUR_NPS_API_KEY_HERE'
+#
+#   export BASE_URL="https://your-endpoint.com/v1"
+#   export MODEL_ID="llama-31-8b-instruct"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langgraph-outdoor-activity-agent
+  labels:
+    app: langgraph-outdoor-activity-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langgraph-outdoor-activity-agent
+  template:
+    metadata:
+      labels:
+        app: langgraph-outdoor-activity-agent
+    spec:
+      containers:
+      - name: langgraph-outdoor-activity-agent
+        image: "${CONTAINER_IMAGE}"
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: PORT
+          value: "8080"
+        # API_KEY from Secret (secure)
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: langgraph-outdoor-activity-agent-secrets
+              key: api-key
+        # NPS_API_KEY from Secret (secure)
+        - name: NPS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: langgraph-outdoor-activity-agent-secrets
+              key: nps-api-key
+        - name: BASE_URL
+          value: "${BASE_URL}"
+        - name: MODEL_ID
+          value: "${MODEL_ID}"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 120
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3

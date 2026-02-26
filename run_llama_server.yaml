@@ -31,6 +31,10 @@ registered_resources:
       provider_id: ollama
       model_type: llm
       metadata: { }
+    - model_id: llama3.1:8b-instruct-q4_0
+      provider_id: ollama
+      model_type: llm
+      metadata: { }
     - model_id: embeddinggemma:latest
       provider_id: ollama
       model_type: embedding

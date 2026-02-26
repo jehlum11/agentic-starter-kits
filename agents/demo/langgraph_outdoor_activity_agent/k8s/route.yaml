@@ -1,0 +1,15 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: langgraph-outdoor-activity-agent
+  labels:
+    app: langgraph-outdoor-activity-agent
+spec:
+  to:
+    kind: Service
+    name: langgraph-outdoor-activity-agent
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
