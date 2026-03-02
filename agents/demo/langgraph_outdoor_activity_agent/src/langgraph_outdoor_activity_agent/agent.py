@@ -1,7 +1,15 @@
 from typing import Any
 
+import os
+
+import mlflow
+from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
+
+# Load .env into os.environ so MLflow picks up MLFLOW_TRACKING_TOKEN,
+# MLFLOW_WORKSPACE, MLFLOW_ENABLE_WORKSPACES automatically
+load_dotenv()
 
 from langgraph_outdoor_activity_agent.tools import (
     geocode_location,
@@ -12,6 +20,16 @@ from langgraph_outdoor_activity_agent.tools import (
     get_park_alerts,
 )
 from langgraph_outdoor_activity_agent.utils import get_env_var
+
+# Enable MLflow tracing if MLFLOW_TRACKING_URI is set
+_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
+if _tracking_uri:
+    from mlflow.store.workspace_rest_store_mixin import WorkspaceRestStoreMixin
+    WorkspaceRestStoreMixin._probe_workspace_support = lambda self: True
+
+    mlflow.set_tracking_uri(_tracking_uri)
+    mlflow.set_experiment("outdoor-activity-agent")
+    mlflow.langchain.autolog(log_traces=True)
 
 
 def get_graph_closure(

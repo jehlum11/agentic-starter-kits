@@ -8,11 +8,11 @@
 
 ## Overview
 
-This demo shows how to customize the base **LangGraph ReAct Agent** template (`agents/base/langgraph_react_agent/`) to build a real agent with live API tools. You only need to replace **two files** — `tools.py` and `agent.py` — and add one dependency.
+This demo shows how to customize the base **LangGraph ReAct Agent** template (`agents/base/langgraph_react_agent/`) to build a real agent with live API tools.
 
 The resulting agent recommends the best day and time window for outdoor activities by reasoning across weather, air quality, daylight, and National Park Service data.
 
-**Example query:** *"I want to go hiking in Colorado next weekend, any recommendations?"*
+**Example query:** *"I want to go hiking near Denver this weekend. What day is best?"*
 
 ---
 
@@ -24,122 +24,39 @@ The resulting agent recommends the best day and time window for outdoor activiti
 
 ---
 
-## Step-by-Step
+## Files to copy to the base template
 
-All commands are run from the repository root.
+From the demo directory, copy these files into `agents/base/langgraph_react_agent/`:
 
-### 1. Go to the base template
+| Source file | Destination | Notes |
+|-------------|-------------|-------|
+| `src/.../tools.py` | `src/langgraph_react_agent_base/tools.py` | Fix import: change `langgraph_outdoor_activity_agent` to `langgraph_react_agent_base` |
+| `src/.../agent.py` | `src/langgraph_react_agent_base/agent.py` | Fix imports: change `langgraph_outdoor_activity_agent` to `langgraph_react_agent_base` |
+| `.env` | `.env` | All secrets and config — share securely with your team |
+| `deploy-local.sh` | `deploy-local.sh` | One-command local setup and run |
+| `deploy-cluster.sh` | `deploy-cluster.sh` | One-command cluster deployment |
+| `setup-cluster.sh` | `setup-cluster.sh` | Deploys Ollama on cluster |
+| `cleanup-cluster.sh` | `cleanup-cluster.sh` | Removes all cluster resources |
+| `k8s/ollama-deployment.yaml` | `k8s/ollama-deployment.yaml` | Ollama pod for the cluster |
+| `k8s/ollama-service.yaml` | `k8s/ollama-service.yaml` | Ollama service |
 
-```bash
-cd agents/base/langgraph_react_agent
-```
-
-### 2. Set up your `.env` file
-
-```bash
-cp ../../../template.env .env
-```
-
-Edit `.env` and set:
-
-```
-API_KEY=not-needed
-BASE_URL=http://localhost:8321
-MODEL_ID=ollama/llama3.2:3b
-CONTAINER_IMAGE=not-needed
-NPS_API_KEY=your-nps-api-key-here
-```
-
-### 3. Copy `tools.py` from the demo
-
-```bash
-cp ../../demo/langgraph_outdoor_activity_agent/src/langgraph_outdoor_activity_agent/tools.py \
-   src/langgraph_react_agent_base/tools.py
-```
-
-Then fix the import at the top of `src/langgraph_react_agent_base/tools.py` — change:
-
-```python
-from langgraph_outdoor_activity_agent.utils import get_env_var
-```
-
-to:
-
-```python
-from langgraph_react_agent_base.utils import get_env_var
-```
-
-### 4. Copy `agent.py` from the demo
-
-```bash
-cp ../../demo/langgraph_outdoor_activity_agent/src/langgraph_outdoor_activity_agent/agent.py \
-   src/langgraph_react_agent_base/agent.py
-```
-
-Then fix the imports at the top of `src/langgraph_react_agent_base/agent.py` — change:
-
-```python
-from langgraph_outdoor_activity_agent.tools import (
-    geocode_location,
-    get_weather_forecast,
-    get_air_quality,
-    get_sunrise_sunset,
-    search_national_parks,
-    get_park_alerts,
-)
-from langgraph_outdoor_activity_agent.utils import get_env_var
-```
-
-to:
-
-```python
-from langgraph_react_agent_base.tools import (
-    geocode_location,
-    get_weather_forecast,
-    get_air_quality,
-    get_sunrise_sunset,
-    search_national_parks,
-    get_park_alerts,
-)
-from langgraph_react_agent_base.utils import get_env_var
-```
-
-### 5. Add `httpx` to dependencies
-
-Open `requirements.txt` and add this line:
-
+Also add these lines to `requirements.txt`:
 ```
 httpx>=0.27.0
+mlflow>=2.19.0
 ```
 
-### 6. (Optional) Increase recursion limit
+And in `main.py`, change `recursion_limit` from `10` to `25`.
 
-The agent uses 6 tools, so it may need more reasoning steps. In `main.py`, find:
+> **Model note:** `qwen2.5:7b` is recommended for reliable function calling. Smaller models like `llama3.2:3b` struggle with multi-tool orchestration, and `llama3.1:8b` does not produce structured tool calls through LlamaStack.
 
-```python
-config={"recursion_limit": 10}
-```
+> **Import fix:** After copying `tools.py` and `agent.py`, replace all occurrences of `langgraph_outdoor_activity_agent` with `langgraph_react_agent_base` in the import lines.
 
-and change it to:
+---
 
-```python
-config={"recursion_limit": 15}
-```
+## Run locally
 
-### 7. Initialize and install
-
-```bash
-chmod +x init.sh
-./init.sh
-```
-
-```bash
-uv venv --python 3.12
-source .venv/bin/activate
-uv pip install -e .
-```
-
-### 8. Start Ollama (Terminal 1)
+### 1. Start Ollama
 
 Ollama is a system-level application (not a Python package). It must be installed separately and runs outside the virtual environment.
 
@@ -147,59 +64,154 @@ Ollama is a system-level application (not a Python package). It must be installe
 ollama serve
 ```
 
-Keep this terminal open. Then pull the required models in a **new terminal**:
+Keep this running in its own terminal. Ollama needs to be running before the deploy script can pull models and start LlamaStack.
 
-```bash
-ollama pull llama3.2:3b
-ollama pull embeddinggemma:latest
-```
+### 2. Run the deploy script
 
-> **Note:** `embeddinggemma:latest` is required by the LlamaStack server config, even though this agent doesn't use embeddings directly.
-
-### 9. Start LlamaStack (Terminal 2)
-
-LlamaStack is an API gateway that wraps Ollama with an OpenAI-compatible interface. It runs inside the virtual environment.
+In a new terminal:
 
 ```bash
 cd agents/base/langgraph_react_agent
-source .venv/bin/activate
-mkdir -p milvus_data
-uv run llama stack run ../../../run_llama_server.yaml
+chmod +x deploy-local.sh
+./deploy-local.sh
 ```
 
-Wait until you see: `Uvicorn running on http://['::', '0.0.0.0']:8321`
+This script will:
+- Create a Python virtual environment and install dependencies
+- Pull Ollama model (`qwen2.5:7b`)
+- Start LlamaStack in the background
+- Launch the interactive agent
 
-> **Note:** The `milvus_data` directory is needed by the LlamaStack vector store provider. Create it before starting the server.
+Make sure `qwen2.5:7b` is registered in `run_llama_server.yaml` under `registered_resources.models`:
 
-### 10. Run the agent (Terminal 3)
+```yaml
+- model_id: qwen2.5:7b
+  provider_id: ollama
+  model_type: llm
+  metadata: { }
+```
+
+### Try it out
+
+```
+I want to go hiking near Denver this weekend. What day is best?
+Is it safe to go running outdoors in San Francisco tomorrow morning?
+I want to go biking in Yosemite next weekend, any recommendations?
+```
+
+---
+
+## Deploy to OpenShift cluster
+
+### 1. Update `.env` for cluster
+
+Set the `CONTAINER_IMAGE` to your registry. The `BASE_URL` and `MODEL_ID` will be auto-detected by the deploy script once Ollama is running on the cluster.
+
+```
+CONTAINER_IMAGE=quay.io/your-username/langgraph-outdoor-activity-agent:latest
+```
+
+### 2. Login
 
 ```bash
-cd agents/base/langgraph_react_agent
-source .venv/bin/activate
-uv run examples/execute_ai_service_locally.py
+oc login -u "login" -p "password" https://your-cluster:port
+docker login -u='login' -p='password' quay.io
 ```
 
-### 11. Try it out
+### 3. Set up cluster dependencies (run once)
+
+```bash
+chmod +x setup-cluster.sh
+./setup-cluster.sh
+```
+
+This will:
+- Deploy Ollama on the cluster and pull the `qwen2.5:7b` model
+- Verify NPS API key and MLflow connectivity
+
+### 4. Deploy the agent
+
+```bash
+chmod +x deploy-cluster.sh
+./deploy-cluster.sh
+```
+
+This will:
+- Auto-detect the in-cluster Ollama URL (`http://ollama.<namespace>.svc.cluster.local:11434/v1`)
+- Build and push the Docker image
+- Create K8s secrets
+- Deploy the agent and print the route URL
+
+### 5. Test
+
+```bash
+curl -X POST https://<YOUR_ROUTE_URL>/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I want to go hiking near Denver this weekend. What day is best?"}'
+```
+
+### 6. Tear down cluster resources
+
+```bash
+chmod +x cleanup-cluster.sh
+./cleanup-cluster.sh
+```
+
+This removes the agent, Ollama, and all associated secrets from the cluster.
+
+---
+
+## MLflow Tracing (Optional)
+
+MLflow tracing is already wired into `agent.py` — it activates automatically when `MLFLOW_TRACKING_URI` is set. No code changes needed.
+
+### Enable tracing
+
+Uncomment the MLflow lines in `.env`:
 
 ```
-I want to go hiking in Colorado next weekend, any recommendations?
-What's the best day for a bike ride in San Francisco this week?
-Is it safe to go running outdoors in Denver tomorrow morning?
+MLFLOW_TRACKING_URI=https://your-mlflow-gateway-url/mlflow
+MLFLOW_TRACKING_TOKEN=your-openshift-token
+MLFLOW_WORKSPACE=your-workspace-name
+MLFLOW_ENABLE_WORKSPACES=true
 ```
+
+For RHOAI/OpenShift AI deployments, the tracking token is your OpenShift token (`oc whoami -t`) and the workspace matches your MLflow workspace name.
+
+For cluster deployment, add to `k8s/deployment.yaml`:
+
+```yaml
+- name: MLFLOW_TRACKING_URI
+  value: "https://your-mlflow-gateway-url/mlflow"
+- name: MLFLOW_WORKSPACE
+  value: "your-workspace-name"
+- name: MLFLOW_ENABLE_WORKSPACES
+  value: "true"
+```
+
+When set, every agent query automatically traces all tool calls, LLM requests, and responses to your MLflow instance.
+
+When not set, tracing is disabled and the agent runs normally with no overhead.
+
+See [MLflow LangGraph Tracing docs](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/) for details.
 
 ---
 
 ## What changed (summary)
 
-| File                 | Change                                                                                                                |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| File | Change |
+|------|--------|
 | `src/.../tools.py` | Replaced 2 dummy tools with 6 real API tools (geocoding, weather, air quality, sunrise/sunset, NPS parks, NPS alerts) |
-| `src/.../agent.py` | Updated tool imports and added a domain-specific system prompt                                                        |
-| `requirements.txt` | Added `httpx>=0.27.0` for HTTP API calls                                                                            |
-| `.env`             | Added `NPS_API_KEY`                                                                                                 |
-| `main.py`          | (Optional) Increased recursion limit from 10 to 15                                                                    |
+| `src/.../agent.py` | Updated tool imports, domain-specific system prompt, and MLflow tracing |
+| `requirements.txt` | Added `httpx>=0.27.0` and `mlflow>=2.19.0` |
+| `.env` | All secrets and config (LLM, NPS, MLflow) in one file |
+| `main.py` | Increased recursion limit from 10 to 25 |
+| `run_llama_server.yaml` | Added `qwen2.5:7b` to registered models |
+| `deploy-local.sh` | One-command local setup and run |
+| `deploy-cluster.sh` | One-command cluster deployment |
+| `setup-cluster.sh` | Pre-flight check for cluster dependencies |
 
-Everything else — `main.py`, `Dockerfile`, `k8s/`, `examples/`, `deploy.sh` — stays the same.
+Everything else — `Dockerfile`, `k8s/`, `examples/` — stays the same.
 
 ---
 
