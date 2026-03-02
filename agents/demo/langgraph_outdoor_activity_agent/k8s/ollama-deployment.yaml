@@ -29,11 +29,13 @@ spec:
           value: "/tmp/.ollama/models"
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "2"
-          limits:
             memory: "8Gi"
+            cpu: "2"
+            nvidia.com/gpu: "1"
+          limits:
+            memory: "12Gi"
             cpu: "4"
+            nvidia.com/gpu: "1"
         volumeMounts:
         - name: ollama-data
           mountPath: /tmp/.ollama

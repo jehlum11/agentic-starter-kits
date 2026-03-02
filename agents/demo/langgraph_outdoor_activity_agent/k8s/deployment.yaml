@@ -49,6 +49,15 @@ spec:
           value: "${BASE_URL}"
         - name: MODEL_ID
           value: "${MODEL_ID}"
+        # MLflow tracing (optional - set via deploy-cluster.sh)
+        - name: MLFLOW_TRACKING_URI
+          value: "${MLFLOW_TRACKING_URI}"
+        - name: MLFLOW_TRACKING_TOKEN
+          value: "${MLFLOW_TRACKING_TOKEN}"
+        - name: MLFLOW_WORKSPACE
+          value: "${MLFLOW_WORKSPACE}"
+        - name: MLFLOW_ENABLE_WORKSPACES
+          value: "${MLFLOW_ENABLE_WORKSPACES}"
         resources:
           requests:
             memory: "256Mi"

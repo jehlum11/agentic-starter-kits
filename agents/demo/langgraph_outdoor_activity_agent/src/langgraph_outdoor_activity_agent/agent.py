@@ -24,12 +24,16 @@ from langgraph_outdoor_activity_agent.utils import get_env_var
 # Enable MLflow tracing if MLFLOW_TRACKING_URI is set
 _tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
 if _tracking_uri:
-    from mlflow.store.workspace_rest_store_mixin import WorkspaceRestStoreMixin
-    WorkspaceRestStoreMixin._probe_workspace_support = lambda self: True
+    try:
+        from mlflow.store.workspace_rest_store_mixin import WorkspaceRestStoreMixin
+        WorkspaceRestStoreMixin._probe_workspace_support = lambda self: True
 
-    mlflow.set_tracking_uri(_tracking_uri)
-    mlflow.set_experiment("outdoor-activity-agent")
-    mlflow.langchain.autolog(log_traces=True)
+        mlflow.set_tracking_uri(_tracking_uri)
+        mlflow.set_experiment("outdoor-activity-agent")
+        mlflow.langchain.autolog(log_traces=True)
+    except Exception as e:
+        print(f"WARNING: MLflow tracing setup failed: {e}")
+        print("Agent will run without tracing. Check MLFLOW_TRACKING_TOKEN in .env.")
 
 
 def get_graph_closure(

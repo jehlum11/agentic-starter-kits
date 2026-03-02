@@ -18,9 +18,41 @@ The resulting agent recommends the best day and time window for outdoor activiti
 
 ## Prerequisites
 
-- **Ollama** installed on your machine ([ollama.com](https://ollama.com/) or `brew install ollama`)
-- **NPS API Key** — free from [developer.nps.gov](https://developer.nps.gov) (sign up to get a 40-character key)
 - **uv** package manager ([docs.astral.sh/uv](https://docs.astral.sh/uv/))
+- **NPS API Key** — free from [developer.nps.gov](https://developer.nps.gov) (sign up to get a 40-character key)
+- **Ollama** — only if using a local model ([ollama.com](https://ollama.com/) or `brew install ollama`)
+
+---
+
+## How `.env` drives everything
+
+The `.env` file is the single source of configuration. All scripts read from it to decide what to do:
+
+```
+# LLM Configuration
+API_KEY=not-needed
+BASE_URL=http://localhost:8321
+MODEL_ID=ollama/qwen2.5:7b
+CONTAINER_IMAGE=not-needed
+
+# National Park Service API Key
+NPS_API_KEY=your-nps-api-key
+
+# MLflow Tracing (optional)
+# MLFLOW_TRACKING_URI=https://your-mlflow-gateway/mlflow
+# MLFLOW_TRACKING_TOKEN=your-token
+# MLFLOW_WORKSPACE=your-workspace
+# MLFLOW_ENABLE_WORKSPACES=true
+```
+
+**The key field is `BASE_URL`:**
+
+| `BASE_URL` value | What happens |
+|---|---|
+| `http://localhost:8321` | Scripts deploy Ollama + LlamaStack locally, or Ollama on the cluster |
+| `https://api.openai.com/v1` (or any remote URL) | Scripts skip Ollama/LlamaStack entirely — agent connects directly to the hosted model |
+
+> **Model note:** `qwen2.5:7b` is recommended for reliable function calling with Ollama. Smaller models like `llama3.2:3b` struggle with multi-tool orchestration.
 
 ---
 
@@ -35,8 +67,9 @@ From the demo directory, copy these files into `agents/base/langgraph_react_agen
 | `.env` | `.env` | All secrets and config — share securely with your team |
 | `deploy-local.sh` | `deploy-local.sh` | One-command local setup and run |
 | `deploy-cluster.sh` | `deploy-cluster.sh` | One-command cluster deployment |
-| `setup-cluster.sh` | `setup-cluster.sh` | Deploys Ollama on cluster |
+| `setup-cluster.sh` | `setup-cluster.sh` | Deploys Ollama on cluster (or configures hosted model) |
 | `cleanup-cluster.sh` | `cleanup-cluster.sh` | Removes all cluster resources |
+| `cleanup-local.sh` | `cleanup-local.sh` | Stops LlamaStack, cleans up local |
 | `k8s/ollama-deployment.yaml` | `k8s/ollama-deployment.yaml` | Ollama pod for the cluster |
 | `k8s/ollama-service.yaml` | `k8s/ollama-service.yaml` | Ollama service |
 
@@ -48,48 +81,52 @@ mlflow>=2.19.0
 
 And in `main.py`, change `recursion_limit` from `10` to `25`.
 
-> **Model note:** `qwen2.5:7b` is recommended for reliable function calling. Smaller models like `llama3.2:3b` struggle with multi-tool orchestration, and `llama3.1:8b` does not produce structured tool calls through LlamaStack.
-
 > **Import fix:** After copying `tools.py` and `agent.py`, replace all occurrences of `langgraph_outdoor_activity_agent` with `langgraph_react_agent_base` in the import lines.
 
 ---
 
 ## Run locally
 
-### 1. Start Ollama
+### With local Ollama (default `.env`)
 
-Ollama is a system-level application (not a Python package). It must be installed separately and runs outside the virtual environment.
-
+Start Ollama in one terminal:
 ```bash
 ollama serve
 ```
 
-Keep this running in its own terminal. Ollama needs to be running before the deploy script can pull models and start LlamaStack.
-
-### 2. Run the deploy script
-
-In a new terminal:
-
+Run the agent in another terminal:
 ```bash
 cd agents/base/langgraph_react_agent
 chmod +x deploy-local.sh
 ./deploy-local.sh
 ```
 
-This script will:
-- Create a Python virtual environment and install dependencies
-- Pull Ollama model (`qwen2.5:7b`)
-- Start LlamaStack in the background
-- Launch the interactive agent
+The script detects `localhost` in `BASE_URL` and automatically:
+- Pulls the model from `MODEL_ID`
+- Starts LlamaStack
+- Launches the interactive agent
 
-Make sure `qwen2.5:7b` is registered in `run_llama_server.yaml` under `registered_resources.models`:
+### With a hosted model (e.g. OpenAI)
 
-```yaml
-- model_id: qwen2.5:7b
-  provider_id: ollama
-  model_type: llm
-  metadata: { }
+Update `.env`:
 ```
+API_KEY=sk-your-openai-key
+BASE_URL=https://api.openai.com/v1
+MODEL_ID=gpt-4o-mini
+```
+
+Then run:
+```bash
+./deploy-local.sh
+```
+
+The script detects a remote `BASE_URL` and skips Ollama and LlamaStack — it just installs dependencies and runs the agent directly.
+
+### To change the Ollama model
+
+Update these three places:
+- `MODEL_ID` in `.env` (e.g. `ollama/qwen2.5:7b`)
+- The model entry in `run_llama_server.yaml` under `registered_resources.models`
 
 ### Try it out
 
@@ -99,13 +136,20 @@ Is it safe to go running outdoors in San Francisco tomorrow morning?
 I want to go biking in Yosemite next weekend, any recommendations?
 ```
 
+### Clean up
+
+```bash
+chmod +x cleanup-local.sh
+./cleanup-local.sh
+```
+
 ---
 
 ## Deploy to OpenShift cluster
 
 ### 1. Update `.env` for cluster
 
-Set the `CONTAINER_IMAGE` to your registry. The `BASE_URL` and `MODEL_ID` will be auto-detected by the deploy script once Ollama is running on the cluster.
+Set `CONTAINER_IMAGE` to the registry path where the deploy script will build and push the agent image:
 
 ```
 CONTAINER_IMAGE=quay.io/your-username/langgraph-outdoor-activity-agent:latest
@@ -125,9 +169,9 @@ chmod +x setup-cluster.sh
 ./setup-cluster.sh
 ```
 
-This will:
-- Deploy Ollama on the cluster and pull the `qwen2.5:7b` model
-- Verify NPS API key and MLflow connectivity
+The script prompts you to choose:
+- **Local Ollama** — deploys Ollama on the cluster, pulls the model, verifies NPS/MLflow
+- **Hosted model** — asks for `BASE_URL`, `MODEL_ID`, `API_KEY`, saves them to `.env`, skips Ollama
 
 ### 4. Deploy the agent
 
@@ -136,11 +180,12 @@ chmod +x deploy-cluster.sh
 ./deploy-cluster.sh
 ```
 
-This will:
-- Auto-detect the in-cluster Ollama URL (`http://ollama.<namespace>.svc.cluster.local:11434/v1`)
-- Build and push the Docker image
-- Create K8s secrets
-- Deploy the agent and print the route URL
+The script reads `.env` and:
+- If `BASE_URL` is `localhost` → replaces it with the in-cluster Ollama URL, checks Ollama is running
+- If `BASE_URL` is a remote URL → uses it directly, skips Ollama check
+- Builds and pushes the Docker image
+- Creates K8s secrets
+- Deploys the agent and prints the route URL
 
 ### 5. Test
 
@@ -157,15 +202,11 @@ chmod +x cleanup-cluster.sh
 ./cleanup-cluster.sh
 ```
 
-This removes the agent, Ollama, and all associated secrets from the cluster.
-
 ---
 
 ## MLflow Tracing (Optional)
 
-MLflow tracing is already wired into `agent.py` — it activates automatically when `MLFLOW_TRACKING_URI` is set. No code changes needed.
-
-### Enable tracing
+MLflow tracing is already wired into `agent.py`. It activates when `MLFLOW_TRACKING_URI` is set in `.env`. No code changes needed.
 
 Uncomment the MLflow lines in `.env`:
 
@@ -176,22 +217,9 @@ MLFLOW_WORKSPACE=your-workspace-name
 MLFLOW_ENABLE_WORKSPACES=true
 ```
 
-For RHOAI/OpenShift AI deployments, the tracking token is your OpenShift token (`oc whoami -t`) and the workspace matches your MLflow workspace name.
-
-For cluster deployment, add to `k8s/deployment.yaml`:
-
-```yaml
-- name: MLFLOW_TRACKING_URI
-  value: "https://your-mlflow-gateway-url/mlflow"
-- name: MLFLOW_WORKSPACE
-  value: "your-workspace-name"
-- name: MLFLOW_ENABLE_WORKSPACES
-  value: "true"
-```
-
-When set, every agent query automatically traces all tool calls, LLM requests, and responses to your MLflow instance.
-
-When not set, tracing is disabled and the agent runs normally with no overhead.
+- The tracking token is auto-refreshed from `oc whoami -t` by the deploy scripts
+- On the cluster, MLflow env vars are injected into the agent pod automatically by `deploy-cluster.sh`
+- When not set, tracing is disabled with no overhead
 
 See [MLflow LangGraph Tracing docs](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/) for details.
 
@@ -204,12 +232,14 @@ See [MLflow LangGraph Tracing docs](https://mlflow.org/docs/latest/genai/tracing
 | `src/.../tools.py` | Replaced 2 dummy tools with 6 real API tools (geocoding, weather, air quality, sunrise/sunset, NPS parks, NPS alerts) |
 | `src/.../agent.py` | Updated tool imports, domain-specific system prompt, and MLflow tracing |
 | `requirements.txt` | Added `httpx>=0.27.0` and `mlflow>=2.19.0` |
-| `.env` | All secrets and config (LLM, NPS, MLflow) in one file |
+| `.env` | Single config file that drives all scripts (LLM, NPS, MLflow) |
 | `main.py` | Increased recursion limit from 10 to 25 |
 | `run_llama_server.yaml` | Added `qwen2.5:7b` to registered models |
-| `deploy-local.sh` | One-command local setup and run |
-| `deploy-cluster.sh` | One-command cluster deployment |
-| `setup-cluster.sh` | Pre-flight check for cluster dependencies |
+| `deploy-local.sh` | One-command local run (auto-detects Ollama vs hosted) |
+| `deploy-cluster.sh` | One-command cluster deploy (auto-detects Ollama vs hosted) |
+| `setup-cluster.sh` | Cluster setup (prompts for Ollama or hosted model) |
+| `cleanup-cluster.sh` | Removes all cluster resources |
+| `cleanup-local.sh` | Stops LlamaStack, cleans up local |
 
 Everything else — `Dockerfile`, `k8s/`, `examples/` — stays the same.
 

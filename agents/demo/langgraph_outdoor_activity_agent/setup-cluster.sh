@@ -2,7 +2,9 @@
 #
 # Set up cluster dependencies for the Outdoor Activity Agent
 #
-# Deploys Ollama with the required model on the OpenShift cluster.
+# Prompts for model type (local Ollama or hosted), configures the
+# environment, and deploys Ollama if needed.
+#
 # Run this ONCE before deploy-cluster.sh.
 #
 # Prerequisites:
@@ -27,7 +29,23 @@ fi
 NAMESPACE=$(oc project -q)
 echo "Cluster: $(oc whoami --show-server)"
 echo "User: $(oc whoami)"
-echo "Namespace: ${NAMESPACE}"
+echo ""
+echo "Current project: ${NAMESPACE}"
+echo "  [y] Deploy to this project"
+echo "  [n] Create a new project"
+echo "  [q] Quit"
+read -p "Choice: " answer
+if [ "$answer" = "q" ] || [ "$answer" = "Q" ]; then
+    echo "Aborted."
+    exit 0
+elif [ "$answer" = "n" ] || [ "$answer" = "N" ]; then
+    read -p "New project name: " new_project
+    oc new-project "$new_project" 2>/dev/null || oc project "$new_project"
+    NAMESPACE="$new_project"
+elif [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+    echo "Aborted."
+    exit 0
+fi
 echo ""
 
 # Load env
@@ -39,7 +57,45 @@ else
 fi
 
 ## ============================================
-# STEP 1: Deploy Ollama
+# Choose model type
+## ============================================
+echo "How will the LLM be served?"
+echo "  [1] Local Ollama (deploy Ollama on this cluster)"
+echo "  [2] Hosted model (OpenAI, Azure, or other remote endpoint)"
+read -p "Choice: " model_choice
+echo ""
+
+if [ "$model_choice" = "2" ]; then
+    ## ============================================
+    # Hosted model setup
+    ## ============================================
+    echo "--- Hosted Model Configuration ---"
+    echo ""
+
+    read -p "BASE_URL (e.g. https://api.openai.com/v1): " hosted_url
+    read -p "MODEL_ID (e.g. gpt-4o-mini): " hosted_model
+    read -p "API_KEY: " hosted_key
+
+    # Update .env with hosted values
+    sed -i.bak "s|^BASE_URL=.*|BASE_URL=${hosted_url}|" .env
+    sed -i.bak "s|^MODEL_ID=.*|MODEL_ID=${hosted_model}|" .env
+    sed -i.bak "s|^API_KEY=.*|API_KEY=${hosted_key}|" .env
+    rm -f .env.bak
+
+    echo ""
+    echo "=== Setup Complete (Hosted Model) ==="
+    echo ""
+    echo "  BASE_URL: ${hosted_url}"
+    echo "  MODEL_ID: ${hosted_model}"
+    echo "  API_KEY:  ${hosted_key:0:10}..."
+    echo ""
+    echo "No Ollama deployment needed."
+    echo "Next step: ./deploy-cluster.sh"
+    exit 0
+fi
+
+## ============================================
+# Local Ollama setup
 ## ============================================
 echo "--- Step 1: Deploying Ollama ---"
 
@@ -52,7 +108,7 @@ echo "Waiting for Ollama to be ready..."
 oc rollout status deployment/ollama --timeout=300s
 
 ## ============================================
-# STEP 2: Pull model into Ollama
+# Pull model
 ## ============================================
 echo ""
 echo "--- Step 2: Pulling model into Ollama ---"
@@ -60,15 +116,17 @@ echo "--- Step 2: Pulling model into Ollama ---"
 OLLAMA_POD=$(oc get pods -l app=ollama -o jsonpath='{.items[0].metadata.name}')
 echo "Ollama pod: ${OLLAMA_POD}"
 
-echo "Pulling qwen2.5:7b (this may take a few minutes)..."
-oc exec "${OLLAMA_POD}" -- ollama pull qwen2.5:7b
+# Use MODEL_ID from .env, strip ollama/ prefix
+PULL_MODEL="${MODEL_ID#ollama/}"
+echo "Pulling ${PULL_MODEL} (this may take a few minutes)..."
+oc exec "${OLLAMA_POD}" -- ollama pull "${PULL_MODEL}"
 
 echo ""
 echo "Models available:"
 oc exec "${OLLAMA_POD}" -- ollama list
 
 ## ============================================
-# STEP 3: Check NPS API Key
+# Check NPS API Key
 ## ============================================
 echo ""
 echo "--- Step 3: Checking NPS API Key ---"
@@ -87,7 +145,7 @@ else
 fi
 
 ## ============================================
-# STEP 4: Check MLflow (optional)
+# Check MLflow (optional)
 ## ============================================
 echo ""
 echo "--- Step 4: Checking MLflow ---"
@@ -115,8 +173,9 @@ fi
 OLLAMA_URL="http://ollama.${NAMESPACE}.svc.cluster.local:11434"
 
 echo ""
-echo "=== Cluster Setup Complete ==="
+echo "=== Cluster Setup Complete (Local Ollama) ==="
 echo ""
-echo "Ollama is running at: ${OLLAMA_URL}"
+echo "  Ollama: ${OLLAMA_URL}"
+echo "  Model:  ${PULL_MODEL}"
 echo ""
 echo "Next step: ./deploy-cluster.sh"
