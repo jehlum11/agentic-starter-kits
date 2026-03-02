@@ -1,9 +1,14 @@
 <div style="text-align: center;">
 
 ![LlamaIndex Logo](/images/llamaindex_logo.svg)
+
 # WebSearch Agent
 
 </div>
+
+---
+## What this agent does
+Agent built on LlamaIndex that uses a web search tool to query the internet and use the results in its answers.
 
 ---
 ### Preconditions:
@@ -56,6 +61,13 @@ Go to agent dir
 ```bash
 cd agents/base/llamaindex_websearch_agent
 ```
+
+Create and activate a virtual environment (Python 3.12) in this directory using [uv](https://docs.astral.sh/uv/):
+```bash
+uv venv --python 3.12
+source .venv/bin/activate
+```
+(On Windows: `.venv\Scripts\activate`)
 
 Make scripts executable
 ```bash

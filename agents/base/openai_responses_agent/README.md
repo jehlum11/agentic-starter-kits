@@ -4,10 +4,11 @@
 
 </div>
 
-Agent **without any agentic framework**: uses only the **OpenAI Python client** and **pure Python** (Responses API). No LlamaStack, LangChain, LlamaIndex, etc. Uses `AIAgent` with chat, tools, and Action/Observation loop. Compatible with OpenAI API or any OpenAI-compatible endpoint (e.g. `BASE_URL` override). Python 3.12+.
+---
+## What this agent does
+Minimal agent with no framework: only the OpenAI Python client and an Action/Observation loop with tools. Use with OpenAI or any compatible API.
 
 ---
-
 ### Preconditions
 
 - Copy/paste the `.env` file and set values for your environment
@@ -74,6 +75,15 @@ Go to agent dir:
 cd agents/base/openai_responses_agent
 ```
 
+Create and activate a virtual environment (Python 3.12) in this directory using [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv venv --python 3.12
+source .venv/bin/activate
+```
+
+(On Windows: `.venv\Scripts\activate`)
+
 Make scripts executable:
 
 ```bash
@@ -133,7 +143,7 @@ llama stack run ../../../run_llama_server.yaml
 Run the example:
 
 ```bash
-uv run agents/base/openai_responses_agent/examples/execute_ai_service_locally.py
+uv run examples/execute_ai_service_locally.py
 ```
 
 ---
