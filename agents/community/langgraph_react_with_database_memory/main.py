@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage
 from pydantic import BaseModel
 from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from langgraph_react_with_database_memory_base.agent import get_graph_closure
 from langgraph_react_with_database_memory_base.utils import (
@@ -117,24 +118,38 @@ async def chat(request: ChatRequest):
             messages = messages[1:]  # Remove system message from input
 
         # Get agent graph with database persistence
-        with PostgresSaver.from_conn_string(DB_URI) as saver:
+        # Use AsyncPostgresSaver for async endpoints (ainvoke).
+        # Sync PostgresSaver raises NotImplementedError on async methods.
+        async with AsyncPostgresSaver.from_conn_string(DB_URI) as saver:
+            await saver.setup()
+
             if system_prompt:
                 agent = agent_graph_closure(saver, request.thread_id, system_prompt)
             else:
                 agent = agent_graph_closure(saver, request.thread_id)
 
-            # Invoke agent with optional thread configuration
+            # Count existing messages before invoke so we can return only new ones
+            prior_count = 0
             if request.thread_id:
                 config = {"configurable": {"thread_id": request.thread_id}}
+                prior = await saver.aget_tuple(config)
+                if prior and prior.checkpoint:
+                    prior_count = len(
+                        prior.checkpoint.get("channel_values", {}).get("messages", [])
+                    )
                 result = await agent.ainvoke({"messages": messages}, config=config)
             else:
                 result = await agent.ainvoke({"messages": messages})
 
-        # Format response messages
+        # Return only new messages from this turn, not the full history.
+        # Full history stays in PostgreSQL and can be queried separately.
+        all_messages = result.get("messages", [])
+        new_messages = all_messages[prior_count:]
+
         response_messages = []
 
-        if "messages" in result and len(result["messages"]) > 0:
-            for message in result["messages"]:
+        if new_messages:
+            for message in new_messages:
                 # 1. User message (HumanMessage)
                 if isinstance(message, HumanMessage):
                     response_messages.append(

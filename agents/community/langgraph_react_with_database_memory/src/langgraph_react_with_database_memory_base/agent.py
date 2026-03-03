@@ -3,9 +3,35 @@ from typing import Callable
 from langchain_openai import ChatOpenAI
 from langgraph.graph.state import CompiledStateGraph
 from langchain.agents import create_agent
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph_react_with_database_memory_base.utils import get_env_var
-from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResponse
+from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
+
+
+class FIFOMessageTrimmer(AgentMiddleware):
+    """Middleware that trims conversation messages to a fixed window (FIFO).
+
+    Keeps only the most recent `max_messages` conversation messages before
+    sending to the LLM. The system prompt is handled separately by create_agent
+    and is NOT part of request.messages.
+
+    Supports both sync (invoke/stream) and async (ainvoke/astream) execution.
+    """
+
+    def __init__(self, max_messages: int = 5):
+        self.max_messages = max_messages
+
+    def wrap_model_call(self, request, handler):
+        messages = request.messages
+        if len(messages) > self.max_messages:
+            messages = messages[-self.max_messages:]
+        return handler(request.override(messages=messages))
+
+    async def awrap_model_call(self, request, handler):
+        messages = request.messages
+        if len(messages) > self.max_messages:
+            messages = messages[-self.max_messages:]
+        return await handler(request.override(messages=messages))
 
 
 def get_graph_closure(
@@ -55,26 +81,11 @@ def get_graph_closure(
     max_messages_in_context = 5
 
     def get_graph(
-        memory: PostgresSaver, thread_id=None, system_prompt=default_system_prompt
+        memory: BaseCheckpointSaver, thread_id=None, system_prompt=default_system_prompt
     ) -> CompiledStateGraph:
         """Get compiled graph with overwritten system prompt, if provided"""
 
-        @wrap_model_call
-        def messages_modifier(
-            request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]
-        ) -> ModelResponse:
-            """Reduces number of agent's input messages right before LLM execution.
-
-            Keeps only the most recent max_messages_in_context conversation messages
-            (FIFO). The system prompt is handled separately by create_agent via
-            request.system_message and is NOT part of request.messages.
-            """
-            messages = request.messages
-
-            if len(messages) > max_messages_in_context:
-                messages = messages[-max_messages_in_context:]
-
-            return handler(request.override(messages=messages))
+        fifo_middleware = FIFOMessageTrimmer(max_messages=max_messages_in_context)
 
         if thread_id:
             return create_agent(
@@ -82,7 +93,7 @@ def get_graph_closure(
                 tools=[],
                 checkpointer=memory,
                 system_prompt=system_prompt,
-                middleware=[messages_modifier],  # Properly inject the middleware
+                middleware=[fifo_middleware],
             )
         else:
             return create_agent(chat, tools=[], system_prompt=system_prompt)
