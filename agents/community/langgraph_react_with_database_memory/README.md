@@ -325,8 +325,8 @@ Send a test request:
 curl -X POST https://<YOUR_ROUTE_URL>/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "thread_id": "test-conversation-1"
+    "messages": [{"role": "user", "content": "I will tell you a story about blue eyed Johnny! He liked ice creams. End."}],
+     "thread_id": "test-conversation-1"
   }'
 ```
 
