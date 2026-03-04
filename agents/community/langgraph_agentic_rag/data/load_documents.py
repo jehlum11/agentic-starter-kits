@@ -51,27 +51,24 @@ def load_and_index_documents(
         api_key=api_key,
     )
 
+    # Remove any stale vector stores and create a fresh one
     vector_store_list = client.vector_stores.list()
+    for vs in vector_store_list.data:
+        print(f"Deleting existing vector store: {vs.id}")
+        client.vector_stores.delete(vector_store_id=vs.id)
 
-    if len(vector_store_list.data) == 1:
-        vector_store = client.vector_stores.retrieve(
-            vector_store_id=vector_store_list.data[0].id
-        )
-        print("There is only one vector store. Picked that.")
-    else:
-        provider_id = "milvus"
-        embedding_dimension = 768
+    provider_id = "milvus"
+    embedding_dimension = 768
 
-        vector_store = client.vector_stores.create(
-            name="my_vector_store",
-            extra_body={
-                "provider_id": provider_id,
-                # "provider_vector_store_id": collection_name,  # --> not working in >0.4.x
-                "embedding_model": embedding_model,
-                "embedding_dimension": embedding_dimension,
-            },
-        )
-        print("Vector store registered successfully.")
+    vector_store = client.vector_stores.create(
+        name="my_vector_store",
+        extra_body={
+            "provider_id": provider_id,
+            "embedding_model": embedding_model,
+            "embedding_dimension": embedding_dimension,
+        },
+    )
+    print(f"Vector store created: {vector_store.id}")
 
     print("Loading documents from directory...")
     loader = TextLoader(docs_to_load)

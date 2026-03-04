@@ -17,15 +17,23 @@ with your own data.
 
 ### Preconditions:
 
-- You need to copy/paste .env file and change its values to yours
+- You need to change .env.template file to .env
 - Decide what way you want to go `local` or `RH OpenShift Cluster` and fill needed values
 - Use `./init.sh` that will add those values from .env to environment variables
 - **RAG-specific**: You need to load documents into the vector store before using the agent (see below)
 
 Copy .env file
 
+Go to agent dir
+
 ```bash
-cp template.env agents/community/langgraph_agentic_rag/.env
+cd agents/community/langgraph_agentic_rag
+```
+
+Change the name of .env file
+
+```bash
+mv template.env .env
 ```
 
 #### Local
@@ -84,12 +92,6 @@ PORT=8000
     - Docker Hub: `docker.io/your-username/langgraph-agentic-rag:latest`
     - GHCR: `ghcr.io/your-org/langgraph-agentic-rag:latest`
 
-Go to agent dir
-
-```bash
-cd agents/community/langgraph_agentic_rag
-```
-
 Create and activate a virtual environment (Python 3.12) in this directory using [uv](https://docs.astral.sh/uv/):
 
 ```bash
@@ -108,7 +110,7 @@ chmod +x init.sh
 Add values from .env to environment variables
 
 ```bash
-./init.sh
+source ./init.sh
 ```
 
 ---
