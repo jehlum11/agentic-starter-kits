@@ -1,6 +1,8 @@
 <div style="text-align: center;">
 
-# OpenAI Responses Agent
+![LangGraph Logo](/images/openai_logo.svg)
+
+# Pure Responses Agent
 
 </div>
 
