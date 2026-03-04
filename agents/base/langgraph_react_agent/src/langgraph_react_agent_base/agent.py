@@ -3,8 +3,9 @@ from typing import Any
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 
+from os import getenv
+
 from langgraph_react_agent_base.tools import dummy_web_search, dummy_math
-from langgraph_react_agent_base.utils import get_env_var
 
 
 def get_graph_closure(
@@ -28,11 +29,11 @@ def get_graph_closure(
     """
 
     if not api_key:
-        api_key = get_env_var("API_KEY")
+        api_key = getenv("API_KEY")
     if not base_url:
-        base_url = get_env_var("BASE_URL")
+        base_url = getenv("BASE_URL")
     if not model_id:
-        model_id = get_env_var("MODEL_ID")
+        model_id = getenv("MODEL_ID")
 
     is_local = any(host in base_url for host in ["localhost", "127.0.0.1"])
 

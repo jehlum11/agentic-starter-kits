@@ -12,7 +12,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_stack_client import LlamaStackClient
 
-from langgraph_agentic_rag.utils import get_env_var
+from os import getenv
 
 
 def load_and_index_documents(
@@ -35,16 +35,16 @@ def load_and_index_documents(
         chunk_overlap: Overlap between chunks
     """
     if not embedding_model:
-        embedding_model = get_env_var("EMBEDDING_MODEL")
+        embedding_model = getenv("EMBEDDING_MODEL")
 
     if not base_url:
-        base_url = get_env_var("BASE_URL")
+        base_url = getenv("BASE_URL")
 
     if not api_key:
-        api_key = get_env_var("API_KEY") or "not-needed"
+        api_key = getenv("API_KEY") or "not-needed"
 
     if not docs_to_load:
-        docs_to_load = get_env_var("DOCS_TO_LOAD")
+        docs_to_load = getenv("DOCS_TO_LOAD")
 
     client = LlamaStackClient(
         base_url=base_url,

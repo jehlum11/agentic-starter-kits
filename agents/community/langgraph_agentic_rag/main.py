@@ -1,13 +1,13 @@
 import json
 import os
 from contextlib import asynccontextmanager
+from os import getenv
 
 from fastapi import FastAPI, HTTPException
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel
 
 from langgraph_agentic_rag.agent import get_graph_closure
-from langgraph_agentic_rag.utils import get_env_var
 
 
 # Request/Response models
@@ -38,15 +38,8 @@ async def lifespan(app: FastAPI):
     global agent_graph
 
     # Get environment variables
-    base_url = get_env_var("BASE_URL")
-    model_id = get_env_var("MODEL_ID")
-    # api_key = get_env_var("API_KEY")
-
-    # RAG-specific configuration
-    # vector_store_path = get_env_var("VECTOR_STORE_PATH")
-    # embedding_model = get_env_var("EMBEDDING_MODEL") or "text-embedding-3-small"
-    use_milvus = get_env_var("USE_MILVUS")
-    use_milvus = use_milvus.lower() == "true" if use_milvus else True
+    base_url = getenv("BASE_URL")
+    model_id = getenv("MODEL_ID")
 
     # Ensure base_url ends with /v1 if provided
     if base_url and not base_url.endswith("/v1"):

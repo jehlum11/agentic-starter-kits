@@ -1,16 +1,10 @@
 #!/bin/bash
 # Usage:
 #   ./init.sh
-#
-# Prerequisites:
-#   - oc CLI installed and logged in to OpenShift cluster
-#   - docker installed
-#   - Access to container registry (e.g., Quay.io)
-#
 
 set -e
 
-source .env && echo "Environment variables loaded from .env file"
+source .env && echo "Environment variables loading from .env file"
 
 if [ -z "$API_KEY" ]; then
     echo "API_KEY not set, check .env file"
@@ -31,14 +25,3 @@ if [ -z "$CONTAINER_IMAGE" ]; then
     echo "CONTAINER_IMAGE not set, check .env file"
     exit 1
 fi
-
-# Get the directory where the script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Get the root directory of the repository (3 levels up from script)
-ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
-# Copy utils.py to the destination
-cp "$ROOT_DIR/utils.py" "$SCRIPT_DIR/src/langgraph_react_agent_base/" && echo "Utils.py copied to destination"
-
-echo "Agent initialized successfully"

@@ -168,7 +168,7 @@ def test_retriever_tool_filters_empty_chunks(mock_get_components):
 
 
 @patch("src.langgraph_agentic_rag.tools.LlamaStackClient")
-@patch("src.langgraph_agentic_rag.tools.get_env_var")
+@patch("src.langgraph_agentic_rag.tools.getenv")
 def test_get_retriever_components_initialization(mock_get_env, mock_client_class):
     """Test that retriever components are properly initialized."""
     # Reset cache
@@ -202,7 +202,7 @@ def test_get_retriever_components_initialization(mock_get_env, mock_client_class
 
 
 @patch("src.langgraph_agentic_rag.tools.LlamaStackClient")
-@patch("src.langgraph_agentic_rag.tools.get_env_var")
+@patch("src.langgraph_agentic_rag.tools.getenv")
 def test_get_retriever_components_caching(mock_get_env, mock_client_class):
     """Test that retriever components are cached after first call."""
     # Set up cache with values
@@ -250,7 +250,7 @@ def test_get_retriever_components_with_base_url(mock_client_class):
 
 
 @patch("src.langgraph_agentic_rag.tools.LlamaStackClient")
-@patch("src.langgraph_agentic_rag.tools.get_env_var")
+@patch("src.langgraph_agentic_rag.tools.getenv")
 def test_get_retriever_components_no_vector_store(mock_get_env, mock_client_class):
     """Test error handling when no vector store is found."""
     # Reset cache

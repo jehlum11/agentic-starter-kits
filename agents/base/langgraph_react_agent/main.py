@@ -1,13 +1,13 @@
 import json
 import os
 from contextlib import asynccontextmanager
+from os import getenv
 
 from fastapi import FastAPI, HTTPException
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel
 
 from langgraph_react_agent_base.agent import get_graph_closure
-from langgraph_react_agent_base.utils import get_env_var
 
 
 # Request/Response models
@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
     global agent_graph
 
     # Get environment variables
-    base_url = get_env_var("BASE_URL")
-    model_id = get_env_var("MODEL_ID")
+    base_url = getenv("BASE_URL")
+    model_id = getenv("MODEL_ID")
 
     # Ensure base_url ends with /v1 if provided
     if base_url and not base_url.endswith("/v1"):

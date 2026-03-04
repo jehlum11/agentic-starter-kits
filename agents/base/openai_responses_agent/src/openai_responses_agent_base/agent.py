@@ -11,12 +11,12 @@ import csv
 import inspect
 import re
 from io import StringIO
+from os import getenv
 from typing import Any, Callable, Dict, List, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from openai_responses_agent_base.utils import get_env_var
 from openai_responses_agent_base.tools import search_price, search_reviews
 
 
@@ -29,12 +29,12 @@ def get_agent_closure(
     Return a callable that creates an agent instance (adapter with async run() for main.py).
     """
     if not base_url:
-        base_url = get_env_var("BASE_URL")
+        base_url = getenv("BASE_URL")
     if not model_id:
-        model_id = get_env_var("MODEL_ID")
+        model_id = getenv("MODEL_ID")
     if not api_key:
         try:
-            api_key = get_env_var("API_KEY")
+            api_key = getenv("API_KEY")
         except (EnvironmentError, ValueError):
             api_key = None
 
@@ -151,12 +151,12 @@ class AIAgent:
         load_dotenv()
 
         if base_url is None:
-            base_url = get_env_var("BASE_URL")
+            base_url = getenv("BASE_URL")
         if model is None:
-            model = get_env_var("MODEL_ID")
+            model = getenv("MODEL_ID")
         if api_key is None:
             try:
-                api_key = get_env_var("API_KEY")
+                api_key = getenv("API_KEY")
             except (EnvironmentError, ValueError):
                 api_key = None
 
