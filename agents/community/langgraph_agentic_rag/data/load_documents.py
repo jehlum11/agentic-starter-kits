@@ -1,11 +1,13 @@
 """
-Script to load documents from text files into Milvus Lite vector store.
+Script to load documents from text files into a vector store via LlamaStack.
 
-This script reads text files from the data directory, splits them into chunks,
-creates embeddings, and stores them in a Milvus Lite vector database.
+If VECTOR_STORE_ID is set, documents are added to the existing store.
+Otherwise a new vector store is created using VECTOR_STORE_NAME,
+its ID is printed and written back into the .env file.
 """
 
 import uuid
+from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain_community.document_loaders import TextLoader
@@ -18,16 +20,37 @@ from os import getenv
 load_dotenv(verbose=True)
 
 
+def update_env_file(key: str, value: str):
+    """Update or add a key=value pair in the .env file next to this script."""
+    env_path = Path(__file__).resolve().parent.parent / ".env"  # data/ -> langgraph_agentic_rag/.env
+    if not env_path.exists():
+        env_path.write_text(f"{key}={value}\n")
+        return
+
+    lines = env_path.read_text().splitlines()
+    found = False
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith(f"{key}=") or stripped == key:
+            lines[i] = f"{key}={value}"
+            found = True
+            break
+    if not found:
+        lines.append(f"{key}={value}")
+
+    env_path.write_text("\n".join(lines) + "\n")
+
+
 def load_and_index_documents(
     docs_to_load: str = None,
     embedding_model: str = None,
     base_url: str = None,
     api_key: str = None,
-    chunk_size: int = 512,  # Increased from 64 to 512 for better context
-    chunk_overlap: int = 128,  # Increased from 32 to 128 for better overlap
+    chunk_size: int = 512,
+    chunk_overlap: int = 128,
 ):
     """
-    Load documents from directory and index them in Milvus Lite.
+    Load documents from directory and index them in a vector store.
 
     Args:
         docs_to_load: Directory containing text files to load
@@ -54,28 +77,30 @@ def load_and_index_documents(
         api_key=api_key,
     )
 
+    vector_store_id = getenv("VECTOR_STORE_ID")
     vector_store_name = getenv("VECTOR_STORE_NAME") or "my_vector_store"
     provider_id = "milvus"
     embedding_dimension = 768
 
-    # Delete any existing vector stores with the same name, then create a fresh one
-    vector_store_list = client.vector_stores.list()
+    if vector_store_id:
+        # Use existing vector store
+        print(f"Using existing vector store: {vector_store_id}")
+    else:
+        # Create a new vector store
+        vector_store = client.vector_stores.create(
+            name=vector_store_name,
+            extra_body={
+                "provider_id": provider_id,
+                "embedding_model": embedding_model,
+                "embedding_dimension": embedding_dimension,
+            },
+        )
+        vector_store_id = vector_store.id
+        print(f"Vector store created: id={vector_store_id} name={vector_store_name}")
 
-    for vs in vector_store_list.data:
-        if vs.name == vector_store_name:
-            print(f"Deleting existing vector store: {vs.id} ({vs.name})")
-            client.vector_stores.delete(vector_store_id=vs.id)
-
-    vector_store = client.vector_stores.create(
-        name=vector_store_name,
-        extra_body={
-            "provider_id": provider_id,
-            "embedding_model": embedding_model,
-            "embedding_dimension": embedding_dimension,
-        },
-    )
-
-    print(f"Vector store created: {vector_store.id} ({vector_store_name})")
+        # Persist the new ID to .env
+        update_env_file("VECTOR_STORE_ID", vector_store_id)
+        print(f"Updated .env with VECTOR_STORE_ID={vector_store_id}")
 
     print("Loading documents from directory...")
     loader = TextLoader(docs_to_load)
@@ -131,8 +156,10 @@ def load_and_index_documents(
     print("\nLoading chunks to Vector Store...")
     client.vector_io.insert(
         chunks=formatted_chunks,
-        vector_store_id=vector_store.id,
+        vector_store_id=vector_store_id,
     )
+
+    print(f"Done! {len(formatted_chunks)} chunks inserted into vector store {vector_store_id}")
 
 
 if __name__ == "__main__":
