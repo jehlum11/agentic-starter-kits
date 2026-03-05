@@ -321,11 +321,11 @@ oc get route langgraph-db-memory -o jsonpath='{.spec.host}'
 Send a test request:
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat \
+curl -X POST https://langgraph-db-memory-tguzik-agents.apps.rosa.ai-eng-gpu.socc.p3.openshiftapps.com/chat \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [{"role": "user", "content": "I will tell you a story about blue eyed Johnny! He liked ice creams. End."}],
-     "thread_id": "test-conversation-1"
+    "thread_id": "test-conversation-1"
   }'
 ```
 
