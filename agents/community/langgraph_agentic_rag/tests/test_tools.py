@@ -3,6 +3,7 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
+from dotenv import load_dotenv
 
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -275,6 +276,12 @@ def test_get_retriever_components_no_vector_store(mock_get_env, mock_client_clas
 
     assert "No vector store found" in str(exc_info.value)
     assert "load_documents.py" in str(exc_info.value)
+
+
+def test_get_retriever_components():
+    load_dotenv(verbose=True)
+    base_url = os.getenv("BASE_URL")
+    get_retriever_components(base_url)
 
 
 if __name__ == "__main__":

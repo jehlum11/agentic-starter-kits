@@ -7,12 +7,15 @@ creates embeddings, and stores them in a Milvus Lite vector database.
 
 import uuid
 
+from dotenv import load_dotenv
 from langchain_community.document_loaders import TextLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_stack_client import LlamaStackClient
 
 from os import getenv
+
+load_dotenv(verbose=True)
 
 
 def load_and_index_documents(
