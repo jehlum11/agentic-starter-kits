@@ -176,7 +176,7 @@ oc get route openai-responses-agent -o jsonpath='{.spec.host}'
 Send a test request:
 
 ```bash
-curl -X POST https://openai-responses-agent-tguzik-agents.apps.rosa.ai-eng-gpu.socc.p3.openshiftapps.com/chat \
+curl -X POST https://<YOUR_ROUTE_URL>/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "How much does a Lenovo Laptop cost and what are the reviews?"}'
 ```
