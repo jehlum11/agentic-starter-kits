@@ -461,3 +461,5 @@ SELECT thread_id, COUNT(*) FROM writes GROUP BY thread_id;
 ## License
 
 MIT License
+
+Copyright (c) 2026
