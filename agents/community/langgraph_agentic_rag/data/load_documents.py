@@ -79,7 +79,7 @@ def load_and_index_documents(
         api_key=api_key,
     )
 
-    vector_store_id = getenv("VECTOR_STORE_ID")
+    vector_store_id = (getenv("VECTOR_STORE_ID") or "").strip().strip("\"'") or None
     provider_id = "milvus"
     embedding_dimension = 768
 

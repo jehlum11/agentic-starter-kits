@@ -2,7 +2,7 @@
 
 ![LangGraph Logo](/images/langgraph_logo.svg)
 
-# Agentic RAG Agent
+# RAG Agent
 
 </div>
 
@@ -41,14 +41,17 @@ mv template.env .env
 Edit the `.env` file with your local configuration:
 
 ```
+# LLM
 BASE_URL=http://localhost:8321
 MODEL_ID=ollama/llama3.2:3b
 API_KEY=not-needed
 CONTAINER_IMAGE=not-needed
 
 # RAG-specific Configuration
-VECTOR_STORE_PATH=/absolute/path/to/milvus_data/milvus_lite.db
 EMBEDDING_MODEL=ollama/embeddinggemma:latest
+
+VECTOR_STORE_ID=""
+VECTOR_STORE_PATH=/absolute/path/to/milvus_data/milvus_lite.db
 DOCS_TO_LOAD=./data/sample_knowledge.txt
 PORT=8000
 ```
@@ -160,7 +163,9 @@ llama stack run ../../../run_llama_server.yaml
 
 ### Load Documents into Vector Store
 
-**IMPORTANT**: Before running the agent, you must load documents into the vector store.
+**IMPORTANT**:
+Before running the agent, you must have your Vector Store ID pasted into `VECTOR_STORE_ID=""`
+If You do not have `VECTOR_STORE_ID` you can create one with that `load_document.py` script.
 
 Run the document loader:
 
@@ -247,8 +252,6 @@ curl -X POST https://<YOUR_ROUTE_URL>/stream \
   -d '{"message": "What is LangChain?"}' |
    jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.content // empty'
 ```
-
-## Agent-Specific Documentation
 
 ### Additional Resources
 

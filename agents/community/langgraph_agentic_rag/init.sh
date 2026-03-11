@@ -25,8 +25,20 @@ if [ -f "$ENV_FILE" ]; then
         line="${line//$'\r'/}"
         line="${line#"${line%%[![:space:]]*}"}"
         [[ -z "$line" || "$line" == \#* ]] && continue
-        export "$line"
-        ENV_VARS+=("${line%%=*}")
+        var_name="${line%%=*}"
+        var_value="${line#*=}"
+        # Strip surrounding quotes from value
+        var_value="${var_value%\"}"
+        var_value="${var_value#\"}"
+        var_value="${var_value%\'}"
+        var_value="${var_value#\'}"
+        # Skip variables with empty values — do not export them
+        if [ -z "$var_value" ]; then
+            echo "  $var_name is empty, skipping export"
+            continue
+        fi
+        export "$var_name=$var_value"
+        ENV_VARS+=("$var_name")
     done < "$ENV_FILE"
     echo "Environment variables loaded from $ENV_FILE"
 else
@@ -34,13 +46,9 @@ else
     return 1 2>/dev/null || exit 1
 fi
 
-# 2. Validate every variable found in .env
+# 2. Print exported variables
 for var_name in "${ENV_VARS[@]}"; do
     var_value=$(eval echo "\$$var_name")
-    if [ -z "$var_value" ]; then
-        echo "  ERROR: $var_name is empty. Check your .env file."
-        return 1 2>/dev/null || exit 1
-    fi
     local_lower=$(echo "$var_name" | tr '[:upper:]' '[:lower:]')
     if [[ "$local_lower" == *password* || "$local_lower" == *apikey* || "$local_lower" == *api_key* || "$local_lower" == *secret* || "$local_lower" == *token* ]]; then
         echo "  $var_name=****"
