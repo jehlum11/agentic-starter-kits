@@ -1,6 +1,7 @@
+from os import getenv
+
 from _interactive_chat import InteractiveChat
 from ai_service import ai_stream_service
-from langgraph_react_agent_base.utils import get_env_var
 
 
 class SimpleContext:
@@ -19,8 +20,8 @@ class SimpleContext:
         return {}
 
 
-base_url = get_env_var("BASE_URL")
-model_id = get_env_var("MODEL_ID")
+base_url = getenv("BASE_URL")
+model_id = getenv("MODEL_ID")
 
 # Ensure base_url ends with /v1 if provided
 if base_url and not base_url.endswith("/v1"):

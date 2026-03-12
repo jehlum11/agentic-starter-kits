@@ -9,16 +9,18 @@ WORKDIR /app
 # UID 1001 is commonly used in OpenShift deployments
 RUN groupadd -r appuser && useradd -r -u 1001 -g appuser appuser
 
-# Copy requirements file first for better layer caching
-COPY requirements.txt .
+# Install uv for fast dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Copy the application code
-COPY main.py .
+# Copy project files for dependency installation
+COPY pyproject.toml .
 COPY src/ ./src/
+
+# Install the project and its dependencies using uv
+RUN uv pip install --system --no-cache .
+
+# Copy the application entrypoint
+COPY main.py .
 
 # Change ownership of the app directory to the non-privileged user
 RUN chown -R appuser:appuser /app

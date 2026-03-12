@@ -1,13 +1,16 @@
 import json
-import os
+import logging
 from contextlib import asynccontextmanager
+from os import getenv
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
+
 from langgraph_react_agent_base.agent import get_graph_closure
-from langgraph_react_agent_base.utils import get_env_var
 
 
 # Request/Response models
@@ -38,8 +41,8 @@ async def lifespan(app: FastAPI):
     global agent_graph
 
     # Get environment variables
-    base_url = get_env_var("BASE_URL")
-    model_id = get_env_var("MODEL_ID")
+    base_url = getenv("BASE_URL")
+    model_id = getenv("MODEL_ID")
 
     # Ensure base_url ends with /v1 if provided
     if base_url and not base_url.endswith("/v1"):
@@ -138,6 +141,71 @@ async def chat(request: ChatRequest):
         )
 
 
+@app.post("/stream")
+async def stream(request: ChatRequest):
+    """
+    Streaming chat endpoint that accepts a message and returns the agent's
+    response as Server-Sent Events (SSE).
+
+    Event types:
+        - token: streamed text token from the LLM
+        - tool_call: tool invocation by the agent
+        - tool_result: result returned by a tool
+        - done: signals the stream is complete
+
+    Args:
+        request: ChatRequest containing the user message
+    """
+    global agent_graph
+
+    if agent_graph is None:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    async def event_generator():
+        try:
+            messages = [HumanMessage(content=request.message)]
+
+            async for event in agent_graph.astream_events(
+                {"messages": messages},
+                config={"recursion_limit": 10},
+                version="v2",
+            ):
+                kind = event["event"]
+
+                # LLM streaming tokens
+                if kind == "on_chat_model_stream":
+                    chunk = event["data"]["chunk"]
+                    if chunk.content:
+                        yield f"event: token\ndata: {json.dumps({'content': chunk.content})}\n\n"
+
+                # Complete tool call (after LLM finishes generating the call)
+                elif kind == "on_chat_model_end":
+                    message = event["data"]["output"]
+                    if hasattr(message, "tool_calls") and message.tool_calls:
+                        for tc in message.tool_calls:
+                            yield f"event: tool_call\ndata: {json.dumps({'name': tc['name'], 'args': tc['args']})}\n\n"
+
+                # Tool execution results
+                elif kind == "on_tool_end":
+                    output = event["data"].get("output", "")
+                    # Extract content from ToolMessage if present
+                    if hasattr(output, "content"):
+                        output = output.content
+                    yield f"event: tool_result\ndata: {json.dumps({'name': event.get('name', ''), 'output': str(output)})}\n\n"
+
+            yield "event: done\ndata: {}\n\n"
+
+        except Exception as e:
+            logger.exception("Error in stream event_generator")
+            yield f"event: error\ndata: {json.dumps({'detail': 'Internal server error'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.get("/health")
 async def health():
     """Return service health and whether the agent graph has been initialized."""
@@ -147,5 +215,5 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", 8000))
+    port = int(getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

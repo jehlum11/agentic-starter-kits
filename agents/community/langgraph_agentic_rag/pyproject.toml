@@ -1,44 +1,35 @@
-[tool.poetry]
+[project]
 name = "langgraph_agentic_rag"
 version = "0.2.0"
 description = "A LangGraph Agentic RAG app using OpenAI-compatible APIs. Supports retrieval-augmented generation with customizable vector stores."
-authors = ["Your Name <you@example.com>"]
-license = "MIT"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-packages = [
-    { include = "langgraph_agentic_rag", from = "src" }
+requires-python = ">=3.12, <3.14"
+dependencies = [
+    "fastapi>=0.132.0",
+    "uvicorn[standard]>=0.41.0",
+    "langchain>=1.2.10",
+    "langchain-openai>=1.1.10",
+    "langchain-community>=0.4.1",
+    "langchain-milvus>=0.3.3",
+    "langgraph-prebuilt>=1.0.0",
+    "llama-stack>=0.5.0",
+    "llama-stack-client>=0.5.0",
+    "openai>=2.21.0",
+    "milvus-lite>=2.5.1",
+    "python-dotenv>=1.2.1",
+    "setuptools>=80.9.0,<82.0.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-langchain-openai = ">=1.1.10"
-openai = ">=2.21.0"
-langgraph = ">=1.0.9"
-langgraph-prebuilt = ">=1.0.0"
-langchain-core = ">=1.2.15"
-langchain = ">=1.2.10"
-langchain-community = ">=0.4.1"
-langchain-milvus = ">=0.3.3"
-langchain-text-splitters = ">=1.1.1"
-llama-stack = ">=0.5.0"
-llama-stack-client = ">=0.5.0"
-pymilvus = ">=2.6.8"
-fastapi = "^0.132.0"
-uvicorn = { extras = ["standard"], version = "^0.41.0" }
-python-dotenv = "^1.2.1"
-pydantic = ">=2.12.5"
-typing-extensions = ">=4.15.0"
-milvus-lite = ">=2.5.1"
-setuptools = ">=80.9.0,<82.0.0"
-
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.3"
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"

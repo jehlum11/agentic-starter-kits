@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 from llama_stack_client import LlamaStackClient
 from pydantic import BaseModel, Field
 
-from langgraph_agentic_rag.utils import get_env_var
+from os import getenv
 
 # Cache to avoid re-initializing on every tool call
 _client_cache = None
@@ -31,22 +31,21 @@ def get_retriever_components(
 
     # Get configuration from environment if not provided
     if not base_url:
-        base_url = get_env_var("BASE_URL")
+        base_url = getenv("BASE_URL")
+    vector_store_id = getenv("VECTOR_STORE_ID")
+    if not vector_store_id:
+        raise RuntimeError(
+            "VECTOR_STORE_ID env var is not set. Run load_documents.py first."
+            "or check if you provided right ID"
+        )
 
     # Initialize LlamaStack client
     client = LlamaStackClient(
         base_url=base_url,
-        api_key=get_env_var("API_KEY"),
+        api_key=getenv("API_KEY"),
     )
 
-    # Get the vector store ID
-    vector_store_list = client.vector_stores.list()
-    if len(vector_store_list.data) == 0:
-        raise RuntimeError(
-            "No vector store found. Please run load_documents.py first to create and populate the vector store."
-        )
-
-    vector_store_id = vector_store_list.data[0].id
+    print(f"Using vector store: {vector_store_id}")
 
     # Cache the components
     _client_cache = client
@@ -93,7 +92,7 @@ def retriever_tool(query: str) -> str:
         vector_store_id=vector_store_id,
         query=query,  # Pass the text query directly
         params={
-            "max_chunks": 2  # Retrieve only the most relevant document (max_chunks not top_k or K)
+            "max_chunks": 5  # Retrieve only the most relevant document (max_chunks not top_k or K)
         },
     )
 
@@ -105,7 +104,7 @@ def retriever_tool(query: str) -> str:
     for i, chunk in enumerate(response.chunks, 1):
         # Skip chunks that are empty or just separators/whitespace
         content = chunk.content.strip()
-        if not content or all(c in "=-_*#" for c in content):
+        if not content or all(c in "=-_*#|" for c in content):
             continue
 
         # Extract source from chunk metadata (Pydantic object)

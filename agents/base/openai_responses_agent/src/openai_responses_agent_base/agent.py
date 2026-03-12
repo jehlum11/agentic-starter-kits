@@ -11,12 +11,12 @@ import csv
 import inspect
 import re
 from io import StringIO
+from os import getenv
 from typing import Any, Callable, Dict, List, Optional
 
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from openai_responses_agent_base.utils import get_env_var
 from openai_responses_agent_base.tools import search_price, search_reviews
 
 
@@ -29,12 +29,12 @@ def get_agent_closure(
     Return a callable that creates an agent instance (adapter with async run() for main.py).
     """
     if not base_url:
-        base_url = get_env_var("BASE_URL")
+        base_url = getenv("BASE_URL")
     if not model_id:
-        model_id = get_env_var("MODEL_ID")
+        model_id = getenv("MODEL_ID")
     if not api_key:
         try:
-            api_key = get_env_var("API_KEY")
+            api_key = getenv("API_KEY")
         except (EnvironmentError, ValueError):
             api_key = None
 
@@ -151,12 +151,12 @@ class AIAgent:
         load_dotenv()
 
         if base_url is None:
-            base_url = get_env_var("BASE_URL")
+            base_url = getenv("BASE_URL")
         if model is None:
-            model = get_env_var("MODEL_ID")
+            model = getenv("MODEL_ID")
         if api_key is None:
             try:
-                api_key = get_env_var("API_KEY")
+                api_key = getenv("API_KEY")
             except (EnvironmentError, ValueError):
                 api_key = None
 
@@ -233,13 +233,14 @@ class AIAgent:
         )
         return _get_output_text_from_response(response)
 
-    def query(self, question: str, max_turns: int = 10) -> Optional[str]:
+    def query(self, question: str, max_turns: int = 10, on_event: Optional[Callable] = None) -> Optional[str]:
         """
         Process a question through multiple turns until getting final answer.
 
         Args:
             question: The input question to process.
             max_turns: Maximum number of turns before timing out.
+            on_event: Optional callback(event_type, data) for streaming events.
 
         Returns:
             The final answer or None if no answer found.
@@ -268,17 +269,25 @@ class AIAgent:
                     action, args_str = actions[0].groups()
                     action_inputs = self._parse_arguments(args_str)
 
+                    if on_event:
+                        on_event("tool_call", {"name": action, "args": action_inputs})
+
                     tool = self.tools.get(action)
                     if not tool:
                         raise ValueError(f"Unknown action: {action}")
 
                     observation = tool(*action_inputs)
+
+                    if on_event:
+                        on_event("tool_result", {"name": action, "output": str(observation)})
+
                     next_prompt = f"Observation: {observation}"
                 else:
                     # No Action: line – treat the whole response as the final answer
                     return result.strip() if result else None
 
-        except Exception:
+        except Exception as e:
+            print(f"Agent error: {e}")
             return None
 
         return None

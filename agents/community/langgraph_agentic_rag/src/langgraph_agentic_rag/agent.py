@@ -1,3 +1,4 @@
+from os import getenv
 from typing import Callable, Annotated, Sequence
 
 from langchain_core.messages import BaseMessage, SystemMessage, AIMessage, HumanMessage
@@ -6,7 +7,6 @@ from langgraph.graph import END, StateGraph, START
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 from .tools import retriever_tool
-from langgraph_agentic_rag.utils import get_env_var
 from typing_extensions import TypedDict
 
 
@@ -34,11 +34,11 @@ def get_graph_closure(
 
     # Get environment variables if not provided
     if not api_key:
-        api_key = get_env_var("API_KEY")
+        api_key = getenv("API_KEY")
     if not base_url:
-        base_url = get_env_var("BASE_URL")
+        base_url = getenv("BASE_URL")
     if not model_id:
-        model_id = get_env_var("MODEL_ID")
+        model_id = getenv("MODEL_ID")
 
     # Check if using local deployment
     is_local = any(host in base_url for host in ["localhost", "127.0.0.1"])

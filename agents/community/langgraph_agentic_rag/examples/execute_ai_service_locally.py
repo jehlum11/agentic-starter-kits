@@ -1,6 +1,7 @@
+from os import getenv
+
 from _interactive_chat import InteractiveChat
 from ai_service import ai_stream_service
-from langgraph_agentic_rag.utils import get_env_var
 
 
 class SimpleContext:
@@ -20,10 +21,10 @@ class SimpleContext:
 
 
 # Load configuration from environment
-base_url = get_env_var("BASE_URL")
-model_id = get_env_var("MODEL_ID")
-vector_store_path = get_env_var("VECTOR_STORE_PATH")
-embedding_model = get_env_var("EMBEDDING_MODEL")
+base_url = getenv("BASE_URL")
+model_id = getenv("MODEL_ID")
+vector_store_path = getenv("VECTOR_STORE_PATH")
+embedding_model = getenv("EMBEDDING_MODEL")
 
 # Ensure base_url ends with /v1 if provided
 if base_url and not base_url.endswith("/v1"):

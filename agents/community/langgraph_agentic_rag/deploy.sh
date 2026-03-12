@@ -14,7 +14,7 @@
 set -e  # Exit on error
 
 source .env
-export CONTAINER_IMAGE BASE_URL MODEL_ID EMBEDDING_MODEL
+export CONTAINER_IMAGE BASE_URL MODEL_ID EMBEDDING_MODEL VECTOR_STORE_NAME VECTOR_STORE_ID
 
 ## ============================================
 # DOCKER BUILD

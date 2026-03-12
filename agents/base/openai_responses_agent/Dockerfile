@@ -5,12 +5,18 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -u 1001 -g appuser appuser
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Install uv for fast dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-COPY main.py .
+# Copy project files for dependency installation
+COPY pyproject.toml .
 COPY src/ ./src/
+
+# Install the project and its dependencies using uv
+RUN uv pip install --system --no-cache .
+
+# Copy the application entrypoint
+COPY main.py .
 
 RUN chown -R appuser:appuser /app
 USER appuser
