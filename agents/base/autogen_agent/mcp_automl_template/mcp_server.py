@@ -1,11 +1,29 @@
-import asyncio
-from utils import PersonInformation
+from os import getenv
+from pathlib import Path
+
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
-# Create an MCP server (OpenAI-based; credit risk scoring can be added via your own backend)
-mcp = FastMCP("AutoMl Credit Risk", log_level="ERROR")
+from register_tools import register_tools_from_config
+
+load_dotenv()
+
+# Host from env so FastMCP doesn't auto-enable localhost-only DNS rebinding (which rejects Route host).
+_host = getenv("HOST", "0.0.0.0")
+# Disable DNS rebinding check so any Host (e.g. OpenShift Route) is accepted.
+_transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
+
+# Create an MCP server
+mcp = FastMCP(
+    "MCP AutoML Server",
+    log_level="DEBUG",
+    host=_host,
+    transport_security=_transport_security,
+)
 
 
+# Simple example tools
 @mcp.tool()
 def add(a: int, b: int) -> int:
     """Add two numbers"""
@@ -18,24 +36,19 @@ def sub(a: int, b: int) -> int:
     return a - b
 
 
-@mcp.tool()
-def evaluate_credit_risk(person_information: PersonInformation) -> dict:
-    """Evaluate credit risk based on person information (demo stub).
-
-    Fill person_information with the possible inputs defined in PersonInformation.
-    This is a placeholder that returns a simple risk score; replace with your own
-    scoring backend (e.g. local model or API) as needed.
-    """
-    # Demo: return a placeholder structure; integrate your own scoring logic here
-    return {
-        "risk_score": 0.5,
-        "message": "Credit risk evaluation stub. Replace with your scoring backend (e.g. OpenAI or custom API).",
-        "input_summary": {
-            "LoanAmount": person_information.LoanAmount,
-            "CreditHistory": person_information.CreditHistory,
-        },
-    }
+# Register tools from YAML config (name, description, schema_path → Pydantic model + MCP tool)
+config_path = Path(__file__).parent / "tools_config.yaml"
+register_tools_from_config(mcp, config_path)
 
 
 if __name__ == "__main__":
-    asyncio.run(mcp.run_sse_async())
+    import uvicorn
+
+    app = None
+    for attr in ("sse_app", "get_sse_app"):
+        fn = getattr(mcp, attr, None)
+        if callable(fn):
+            app = fn()
+            break
+    port = int(getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, forwarded_allow_ips="*")

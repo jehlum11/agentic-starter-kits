@@ -32,13 +32,5 @@ if [ -z "$CONTAINER_IMAGE" ]; then
     exit 1
 fi
 
-# Get the directory where the script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Get the root directory of the repository (3 levels up from script)
-ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-
-# Copy utils.py to the destination
-cp "$ROOT_DIR/utils.py" "$SCRIPT_DIR/src/autogen_agent_base/" && echo "Utils.py copied to destination"
 
 echo "Agent initialized successfully"

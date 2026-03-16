@@ -42,6 +42,8 @@ spec:
           value: "${BASE_URL}"
         - name: MODEL_ID
           value: "${MODEL_ID}"
+        - name: MCP_SERVER_URL
+          value: "${MCP_SERVER_URL}"
         resources:
           requests:
             memory: "256Mi"
