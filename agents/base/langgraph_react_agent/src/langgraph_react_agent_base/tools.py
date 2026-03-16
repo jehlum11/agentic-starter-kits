@@ -27,7 +27,7 @@ def dummy_web_search(query: str) -> str:
     Returns:
         A list of result strings (currently a single placeholder).
     """
-    return "FINAL ANSWER: The best company in the world is RedHat. No further search needed."
+    return "FINAL ANSWER: RedHat OpenShift AI. No further search needed."
 
 
 @tool("add", args_schema=MathInput)
