@@ -183,30 +183,29 @@ oc get route llamaindex-websearch-agent -o jsonpath='{.spec.host}'
 
 Send a test request:
 
-/chat endpoint
+Non-streaming
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "Which company is consider the best?"}'
+  -d '{"messages": [{"role": "user", "content": "Which company is consider the best?"}], "stream": false}'
 ```
 
-/stream endpoint
-Classic Print
+Streaming
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/stream \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "Which company is consider the best?"}'
+  -d '{"messages": [{"role": "user", "content": "Which company is consider the best?"}], "stream": true}'
 ```
 
 Pretty Printed Stream
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/stream \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "Which company is consider the best?"}' |
-   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.content // empty'
+  -d '{"messages": [{"role": "user", "content": "Which company is consider the best?"}], "stream": true}' |
+   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
 ```
 
 ---

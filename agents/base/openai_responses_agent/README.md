@@ -174,30 +174,30 @@ oc get route openai-responses-agent -o jsonpath='{.spec.host}'
 ```
 
 Send a test request:
-/chat endpoint
+
+Non-streaming
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "How much does a Lenovo Laptop cost and what are the reviews?"}'
+  -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": false}'
 ```
 
-/stream endpoint
-Classic Print
+Streaming
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/stream \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "How much does a Lenovo Laptop cost and what are the reviews?"}'
+  -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": true}'
 ```
 
 Pretty Printed Stream
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/stream \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "How much does a Lenovo Laptop cost and what are the reviews?"}' |
-   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.content // empty'
+  -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": true}' |
+   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
 ```
 
 ---
