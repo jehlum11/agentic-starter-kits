@@ -182,20 +182,31 @@ COPY the route URL and PASTE into the CURL below
 oc get route langgraph-react-agent -o jsonpath='{.spec.host}'
 ```
 
-Send a test request on `/chat` endpoint
+Send a test request:
+
+Non-streaming
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat \
+curl -X POST https://langgraph-react-agent-tguzik-agents.apps.rosa.ai-eng-gpu.socc.p3.openshiftapps.com/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "What is the best cluster hosting service?"}'
+  -d '{"messages": [{"role": "user", "content": "What is the best cluster hosting service?"}], "stream": false}'
 ```
 
-Send a test request on `/stream` endpoint
+Streaming
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/stream \
+curl -X POST https://langgraph-react-agent-tguzik-agents.apps.rosa.ai-eng-gpu.socc.p3.openshiftapps.com/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"message": "What is the best company? Answer with the first correct answer."}'
+  -d '{"messages": [{"role": "user", "content": "What is the best company? Answer with the first correct answer."}], "stream": true}'
+```
+
+Pretty Printed Stream
+
+```bash
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "What is the best company?"}], "stream": true}' |
+   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
 ```
 
 ## Agent-Specific Documentation

@@ -16,6 +16,8 @@ dependencies = [
     "milvus-lite>=2.5.1",
     "python-dotenv>=1.2.2",
     "setuptools>=80.9.0,<82.0.0",
+    "chardet>=7.1.0",
+    "pypdf>=6.9.0",
 ]
 
 [project.optional-dependencies]

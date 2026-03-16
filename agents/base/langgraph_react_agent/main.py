@@ -1,5 +1,7 @@
 import json
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 from os import getenv
 
@@ -13,18 +15,18 @@ logger = logging.getLogger(__name__)
 from langgraph_react_agent_base.agent import get_graph_closure
 
 
-# Request/Response models
-class ChatRequest(BaseModel):
-    """Incoming chat request body for the /chat endpoint."""
+# OpenAI-compatible request/response models
+class ChatMessage(BaseModel):
+    role: str
+    content: str
 
-    message: str
 
+class ChatCompletionRequest(BaseModel):
+    """OpenAI-compatible chat completion request."""
 
-class ChatResponse(BaseModel):
-    """Structured chat response (answer and optional steps)."""
-
-    answer: str
-    steps: list[str]
+    messages: list[ChatMessage]
+    model: str | None = None
+    stream: bool = False
 
 
 # Global variable for agent graph
@@ -33,27 +35,19 @@ agent_graph = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize the ReAct agent graph on startup and clear it on shutdown.
-
-    Reads BASE_URL and MODEL_ID from the environment, builds the graph via
-    get_graph_closure, and sets the global agent_graph for the /chat endpoint.
-    """
+    """Initialize the ReAct agent graph on startup and clear it on shutdown."""
     global agent_graph
 
-    # Get environment variables
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")
 
-    # Ensure base_url ends with /v1 if provided
     if base_url and not base_url.endswith("/v1"):
         base_url = base_url.rstrip("/") + "/v1"
 
-    # Get graph closure and create agent graph
     agent_graph = get_graph_closure(model_id=model_id, base_url=base_url)
 
     yield
 
-    # Cleanup on shutdown (if needed)
     agent_graph = None
 
 
@@ -65,49 +59,61 @@ app = FastAPI(
 )
 
 
-@app.post("/chat")
-async def chat(request: ChatRequest):
+def _build_langchain_messages(messages: list[ChatMessage]) -> list[HumanMessage]:
+    """Extract the last user message from the OpenAI-format messages list."""
+    for msg in reversed(messages):
+        if msg.role == "user":
+            return [HumanMessage(content=msg.content)]
+    raise ValueError("No user message found in messages list")
+
+
+def _make_completion_id() -> str:
+    return f"chatcmpl-{uuid.uuid4().hex[:12]}"
+
+
+@app.post("/chat/completions")
+async def chat_completions(request: ChatCompletionRequest):
     """
-    Chat endpoint that accepts a message and returns the agent's response.
+    OpenAI-compatible chat completions endpoint.
 
-    Args:
-        request: ChatRequest containing the user message
-
-    Returns:
-        JSON response with full conversation history including tool calls
+    When stream=false, returns a full chat.completion response.
+    When stream=true, returns SSE chat.completion.chunk events.
     """
     global agent_graph
 
     if agent_graph is None:
         raise HTTPException(status_code=503, detail="Agent not initialized")
 
-    try:
-        messages = [HumanMessage(content=request.message)]
+    langchain_messages = _build_langchain_messages(request.messages)
+    model_id = request.model or getenv("MODEL_ID", "model")
 
-        # Use invoke to get the agent's response
+    if request.stream:
+        return await _handle_stream(langchain_messages, model_id)
+    else:
+        return await _handle_chat(langchain_messages, model_id)
+
+
+async def _handle_chat(messages: list[HumanMessage], model_id: str):
+    """Handle non-streaming chat completion."""
+    global agent_graph
+
+    try:
         result = await agent_graph.ainvoke(
             {"messages": messages}, config={"recursion_limit": 10}
         )
 
-        response_messages = []
+        # Extract the final assistant message content
+        assistant_content = ""
+        context_messages = []
 
         if "messages" in result and len(result["messages"]) > 0:
             for message in result["messages"]:
-                # 1. User message (HumanMessage)
                 if isinstance(message, HumanMessage):
-                    response_messages.append(
-                        {
-                            "role": "user",
-                            "content": message.content,
-                        }
+                    context_messages.append(
+                        {"role": "user", "content": message.content}
                     )
-
-                # 2. AI message (AIMessage)
                 elif isinstance(message, AIMessage):
-                    msg_data = {
-                        "role": "assistant",
-                        "content": message.content or "",
-                    }
+                    msg_data = {"role": "assistant", "content": message.content or ""}
                     if message.tool_calls:
                         msg_data["tool_calls"] = [
                             {
@@ -120,11 +126,9 @@ async def chat(request: ChatRequest):
                             }
                             for tc in message.tool_calls
                         ]
-                    response_messages.append(msg_data)
-
-                # 3. Tool response (ToolMessage)
+                    context_messages.append(msg_data)
                 elif isinstance(message, ToolMessage):
-                    response_messages.append(
+                    context_messages.append(
                         {
                             "role": "tool",
                             "tool_call_id": message.tool_call_id,
@@ -133,7 +137,30 @@ async def chat(request: ChatRequest):
                         }
                     )
 
-        return {"messages": response_messages, "finish_reason": "stop"}
+            # Final assistant content is the last AIMessage with content
+            for message in reversed(result["messages"]):
+                if isinstance(message, AIMessage) and message.content:
+                    assistant_content = message.content
+                    break
+
+        return {
+            "id": _make_completion_id(),
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": assistant_content,
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "context": context_messages,
+            "usage": None,
+        }
 
     except Exception as e:
         raise HTTPException(
@@ -141,30 +168,15 @@ async def chat(request: ChatRequest):
         )
 
 
-@app.post("/stream")
-async def stream(request: ChatRequest):
-    """
-    Streaming chat endpoint that accepts a message and returns the agent's
-    response as Server-Sent Events (SSE).
-
-    Event types:
-        - token: streamed text token from the LLM
-        - tool_call: tool invocation by the agent
-        - tool_result: result returned by a tool
-        - done: signals the stream is complete
-
-    Args:
-        request: ChatRequest containing the user message
-    """
+async def _handle_stream(messages: list[HumanMessage], model_id: str):
+    """Handle streaming chat completion with OpenAI-compatible SSE chunks."""
     global agent_graph
 
-    if agent_graph is None:
-        raise HTTPException(status_code=503, detail="Agent not initialized")
+    completion_id = _make_completion_id()
+    created = int(time.time())
 
     async def event_generator():
         try:
-            messages = [HumanMessage(content=request.message)]
-
             async for event in agent_graph.astream_events(
                 {"messages": messages},
                 config={"recursion_limit": 10},
@@ -176,28 +188,105 @@ async def stream(request: ChatRequest):
                 if kind == "on_chat_model_stream":
                     chunk = event["data"]["chunk"]
                     if chunk.content:
-                        yield f"event: token\ndata: {json.dumps({'content': chunk.content})}\n\n"
+                        data = {
+                            "id": completion_id,
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model_id,
+                            "choices": [
+                                {
+                                    "index": 0,
+                                    "delta": {"content": chunk.content},
+                                    "finish_reason": None,
+                                }
+                            ],
+                        }
+                        yield f"data: {json.dumps(data)}\n\n"
 
-                # Complete tool call (after LLM finishes generating the call)
+                # Tool calls (after LLM finishes generating the call)
                 elif kind == "on_chat_model_end":
                     message = event["data"]["output"]
                     if hasattr(message, "tool_calls") and message.tool_calls:
-                        for tc in message.tool_calls:
-                            yield f"event: tool_call\ndata: {json.dumps({'name': tc['name'], 'args': tc['args']})}\n\n"
+                        tool_calls_delta = [
+                            {
+                                "index": i,
+                                "id": tc["id"],
+                                "type": "function",
+                                "function": {
+                                    "name": tc["name"],
+                                    "arguments": json.dumps(tc["args"]),
+                                },
+                            }
+                            for i, tc in enumerate(message.tool_calls)
+                        ]
+                        data = {
+                            "id": completion_id,
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model_id,
+                            "choices": [
+                                {
+                                    "index": 0,
+                                    "delta": {
+                                        "role": "assistant",
+                                        "tool_calls": tool_calls_delta,
+                                    },
+                                    "finish_reason": None,
+                                }
+                            ],
+                        }
+                        yield f"data: {json.dumps(data)}\n\n"
 
                 # Tool execution results
                 elif kind == "on_tool_end":
                     output = event["data"].get("output", "")
-                    # Extract content from ToolMessage if present
                     if hasattr(output, "content"):
                         output = output.content
-                    yield f"event: tool_result\ndata: {json.dumps({'name': event.get('name', ''), 'output': str(output)})}\n\n"
+                    data = {
+                        "id": completion_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model_id,
+                        "choices": [
+                            {
+                                "index": 0,
+                                "delta": {
+                                    "role": "tool",
+                                    "content": str(output),
+                                    "name": event.get("name", ""),
+                                },
+                                "finish_reason": None,
+                            }
+                        ],
+                    }
+                    yield f"data: {json.dumps(data)}\n\n"
 
-            yield "event: done\ndata: {}\n\n"
+            # Send final chunk with finish_reason
+            final_data = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created,
+                "model": model_id,
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {},
+                        "finish_reason": "stop",
+                    }
+                ],
+            }
+            yield f"data: {json.dumps(final_data)}\n\n"
+            yield "data: [DONE]\n\n"
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error in stream event_generator")
-            yield f"event: error\ndata: {json.dumps({'detail': 'Internal server error'})}\n\n"
+            error_data = {
+                "error": {
+                    "message": "Internal server error",
+                    "type": "server_error",
+                }
+            }
+            yield f"data: {json.dumps(error_data)}\n\n"
 
     return StreamingResponse(
         event_generator(),
