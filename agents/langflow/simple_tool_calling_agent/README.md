@@ -117,7 +117,12 @@ This agent assumes Langflow, Langfuse, and an LLM (LlamaStack/KServe) are alread
 1. Open the Langflow UI on your cluster
 2. Import `flows/outdoor-activity-agent.json`
 3. Configure the flow components:
-   - **KServe vLLM**: set `api_base` to your cluster's LLM endpoint (e.g., `http://llama-3-1-8b-instruct-predictor.<namespace>.svc.cluster.local:8080/v1`) and `model_name` to your model ID (e.g., `/mnt/models`)
+   - **KServe vLLM**: set `api_base` to your cluster's LLM endpoint and `model_name` to your model ID. You can connect directly to the model or go through LlamaStack:
+
+     | Option | api_base | model_name |
+     |--------|----------|------------|
+     | Via LlamaStack | http://llamastack-service.\<namespace\>.svc.cluster.local:8321/v1 | vllm//mnt/models |
+     | Direct to KServe | http://\<model\>-predictor.\<namespace\>.svc.cluster.local:8080/v1 | /mnt/models |
    - **NPS Search Parks**: set `api_key` (get one free at https://developer.nps.gov)
    - **NPS Park Alerts**: set `api_key` (same NPS key)
 4. Run the agent
