@@ -110,7 +110,7 @@ On the cluster, replace `localhost:7860` with your cluster's Langflow route URL.
 
 ## Deploy to cluster
 
-This agent assumes Langflow, Langfuse, and an LLM (LlamaStack/KServe) are already running on the cluster.
+There is nothing to build or deploy — no Dockerfiles, no Helm charts, no k8s manifests. This agent assumes Langflow, Langfuse, and an LLM (LlamaStack/KServe) are already running on the cluster. You just import the flow JSON into the existing Langflow instance and configure it.
 
 ### Finding cluster endpoints
 
@@ -145,7 +145,6 @@ oc get inferenceservice --all-namespaces
    - **NPS Park Alerts**: set `api_key` (same NPS key)
 4. Run the agent
 
-No Docker build, no Helm chart, no k8s manifests needed.
 
 ---
 
