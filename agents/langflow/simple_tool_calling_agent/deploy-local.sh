@@ -68,7 +68,7 @@ if [ "$USE_OLLAMA" = "yes" ]; then
   fi
   OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:7b}"
 
-  if ollama list 2>/dev/null | grep -q "$OLLAMA_MODEL"; then
+  if ollama list | grep -q "$OLLAMA_MODEL"; then
     echo "Ollama model '$OLLAMA_MODEL' already available."
   else
     echo "Pulling Ollama model: $OLLAMA_MODEL (first time only)..."
