@@ -88,10 +88,7 @@ class ChatCompletionResponse(BaseModel):
     )
     model: str = Field(..., description="The model used for the chat completion.")
     choices: list[Choice] = Field(..., description="A list of chat completion choices.")
-    context: list[dict] | None = Field(
-        None,
-        description="Full conversation context including tool calls and results.",
-    )
+
     usage: dict | None = Field(
         None, description="Usage statistics for the completion request."
     )
@@ -336,35 +333,35 @@ async def _handle_stream(user_message: str, model_id: str):
 
             async for event in handler.stream_events():
                 if isinstance(event, ToolCallEvent):
-                    for tc in event.tool_calls:
-                        tool_calls_delta = [
+                    tool_calls_delta = [
+                        {
+                            "index": i,
+                            "id": getattr(tc, "tool_id", ""),
+                            "type": "function",
+                            "function": {
+                                "name": tc.tool_name,
+                                "arguments": json.dumps(tc.tool_kwargs),
+                            },
+                        }
+                        for i, tc in enumerate(event.tool_calls)
+                    ]
+                    data = {
+                        "id": completion_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model_id,
+                        "choices": [
                             {
                                 "index": 0,
-                                "id": getattr(tc, "tool_id", ""),
-                                "type": "function",
-                                "function": {
-                                    "name": tc.tool_name,
-                                    "arguments": json.dumps(tc.tool_kwargs),
+                                "delta": {
+                                    "role": "assistant",
+                                    "tool_calls": tool_calls_delta,
                                 },
+                                "finish_reason": None,
                             }
-                        ]
-                        data = {
-                            "id": completion_id,
-                            "object": "chat.completion.chunk",
-                            "created": created,
-                            "model": model_id,
-                            "choices": [
-                                {
-                                    "index": 0,
-                                    "delta": {
-                                        "role": "assistant",
-                                        "tool_calls": tool_calls_delta,
-                                    },
-                                    "finish_reason": None,
-                                }
-                            ],
-                        }
-                        yield f"data: {json.dumps(data)}\n\n"
+                        ],
+                    }
+                    yield f"data: {json.dumps(data)}\n\n"
 
                 elif isinstance(event, InputEvent):
                     if event.input:

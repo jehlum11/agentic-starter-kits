@@ -177,7 +177,7 @@ Send a test request:
 Non-streaming
 
 ```bash
-curl -X POST https://crewai-websearch-agent-tguzik-agents.apps.rosa.ai-eng-gpu.socc.p3.openshiftapps.com/chat/completions \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "What is the best cluster hosting service?"}], "stream": false}'
 ```

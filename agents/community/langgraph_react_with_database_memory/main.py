@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -8,13 +7,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage
-from pydantic import BaseModel, Field
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from pydantic import BaseModel, Field
+from os import getenv
 
 from langgraph_react_with_database_memory_base.agent import get_graph_closure
 from langgraph_react_with_database_memory_base.utils import (
-    getenv,
     get_database_uri,
 )
 
@@ -99,10 +98,7 @@ class ChatCompletionResponse(BaseModel):
     )
     model: str = Field(..., description="The model used for the chat completion.")
     choices: list[Choice] = Field(..., description="A list of chat completion choices.")
-    context: list[dict] | None = Field(
-        None,
-        description="Full conversation context including tool calls and results.",
-    )
+
     usage: dict | None = Field(
         None, description="Usage statistics for the completion request."
     )
@@ -471,5 +467,5 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", 8000))
+    port = int(getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

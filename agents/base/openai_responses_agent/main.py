@@ -88,10 +88,7 @@ class ChatCompletionResponse(BaseModel):
     )
     model: str = Field(..., description="The model used for the chat completion.")
     choices: list[Choice] = Field(..., description="A list of chat completion choices.")
-    context: list[dict] | None = Field(
-        None,
-        description="Full conversation context including tool calls and results.",
-    )
+
     usage: dict | None = Field(
         None, description="Usage statistics for the completion request."
     )
