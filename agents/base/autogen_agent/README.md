@@ -33,18 +33,18 @@ Edit `.env`.
 
 #### Local configuration
 
-For local runs, set at least:
+For local runs (e.g. Ollama), set at least:
 
 ```
-BASE_URL=http://localhost:8321
-MODEL_ID=ollama/llama3.2:3b
+BASE_URL=http://localhost:11434
+MODEL_ID=llama3.2:3b
 API_KEY=not-needed
-MCP_SERVER_URL=http://127.0.0.1:8080/sse
+MCP_SERVER_URL=http://127.0.0.1:8000/sse
 CONTAINER_IMAGE=not-needed
 CONTAINER_IMAGE_MCP=not-needed
 ```
 
-(You will run the MCP server separately, e.g. from `mcp_automl_template` — see the "Local usage" section.)
+Use port **8000** for MCP so the agent can run on **8080**. The app loads `.env` automatically. You will start the MCP server first (see "Local usage" below).
 
 #### OpenShift cluster
 
@@ -88,19 +88,36 @@ uv pip install -e .
 
 ## Local usage
 
-1. **MCP server** (e.g. from `mcp_automl_template`) must be running and reachable at the URL set in `MCP_SERVER_URL` (e.g. `http://127.0.0.1:8080/sse`).
-2. **LLM** — either local (Ollama) or remote (Llama Stack); `BASE_URL` and `MODEL_ID` in `.env` must be correct.
+**Quick start (two terminals):**
 
-Run the application:
+1. **Terminal 1 — MCP server** (must be running before the agent):
 
-```bash
-uv run uvicorn main:app --host 0.0.0.0 --port 8080
-```
+   ```bash
+   cd agents/base/autogen_agent/mcp_automl_template
+   uv pip install -e .
+   PORT=8000 uv run python mcp_server.py
+   ```
+
+2. **Terminal 2 — Agent:**
+
+   ```bash
+   cd agents/base/autogen_agent
+   uv run uvicorn main:app --host 0.0.0.0 --port 8080
+   ```
+
+3. Test: `curl -X POST http://localhost:8080/chat/completions -H "Content-Type: application/json" -d '{"message": "What is 2+2? Use a tool if needed."}'`
+
+---
+
+**Details:**
+
+- **MCP server** must be reachable at `MCP_SERVER_URL` (e.g. `http://127.0.0.1:8000/sse`). Start it first.
+- **LLM** — local (Ollama) or remote; `BASE_URL` and `MODEL_ID` in `.env` must be correct (Ollama: `BASE_URL=http://localhost:11434`, `MODEL_ID=llama3.2:3b`).
 
 Test the `/chat` endpoint:
 
 ```bash
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"message": "What is 2+2? Use a tool if needed."}'
 ```

@@ -16,6 +16,9 @@ from autogen_ext.tools.mcp import (
 )
 
 from autogen_agent_base.agent import get_agent_chat
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # Request/Response models (same API shape as before)
