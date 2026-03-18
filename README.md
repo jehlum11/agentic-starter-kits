@@ -1,7 +1,6 @@
 <div style="text-align: center;">
 
 ![Agentic Starter Kits](/images/ask_logo.png)
-
 # Agentic Starter Kits
 
 </div>
@@ -13,19 +12,16 @@ deploy to Red Hat OpenShift. Each agent has step-by-step docs.
 
 ## Agents
 
-Choose an agent and follow its README for setup and deployment:
+Agents are organized by framework. Pick one and follow its README:
 
-- **[LangGraph ReAct](./agents/base/langgraph_react_agent/README.md)** – General-purpose agent using a ReAct loop: it
-  reasons and calls tools (e.g. search, math) step by step. Built with LangGraph and LangChain.
-- **[LlamaIndex WebSearch](./agents/base/llamaindex_websearch_agent/README.md)** – Agent built on LlamaIndex that uses a
-  web search tool to query the internet and use the results in its answers.
-- **[OpenAI Responses](./agents/base/openai_responses_agent/README.md)** – Minimal agent with no framework: only the
-  OpenAI Python client and an Action/Observation loop with tools. Use with OpenAI or any compatible API.
-- **[LangGraph Agentic RAG](./agents/community/langgraph_agentic_rag/README.md)** – RAG agent that indexes documents in
-  a vector store (Milvus) and retrieves relevant chunks to augment the LLM’s answers with your own data.
-- **[LangGraph ReAct with Database Memory](./agents/community/langgraph_react_with_database_memory/README.md)** – ReAct
-  agent with PostgreSQL-backed conversation memory. Full chat history is persisted in the database while a FIFO sliding
-  window keeps only the last N messages in the LLM context. Built with LangGraph and `create_agent` middleware.
+| Framework | Agent | Description |
+|-----------|-------|-------------|
+| **LangGraph** | [ReAct Agent](./agents/langgraph/react_agent/) | General-purpose agent using a ReAct loop: it reasons and calls tools (e.g. search, math) step by step. Built with LangGraph and LangChain. |
+| **LangGraph** | [Agentic RAG](./agents/langgraph/agentic_rag/) | RAG agent that indexes documents in a vector store (Milvus) and retrieves relevant chunks to augment the LLM's answers with your own data. |
+| **LangGraph** | [ReAct + DB Memory](./agents/langgraph/react_with_database_memory/) | ReAct agent with PostgreSQL-backed conversation memory. Full chat history is persisted in the database while a FIFO sliding window keeps only the last N messages in the LLM context. |
+| **LlamaIndex** | [WebSearch Agent](./agents/llamaindex/websearch_agent/) | Agent built on LlamaIndex that uses a web search tool to query the internet and use the results in its answers. |
+| **CrewAI** | [WebSearch Agent](./agents/crewai/websearch_agent/) | CrewAI-based agent with a web search tool to query the internet and answer user questions. |
+| **Vanilla Python** | [OpenAI Responses Agent](./agents/vanilla_python/openai_responses_agent/) | Minimal agent with no framework: only the OpenAI Python client and an Action/Observation loop with tools. Use with OpenAI or any compatible API. |
 
 ## Deployment Options
 
@@ -48,18 +44,19 @@ Agents in this repository can support two deployment modes:
 ## Repository Structure
 
 ```
-Agentic-Starter-Kits/
+agentic-starter-kits/
 ├── agents/
-│   ├── base/
-│   │   ├── langgraph_react_agent/       # LangGraph ReAct agent 
-│   │   └── llamaindex_websearch_agent/  # LlamaIndex web search agent
-│   │   └── openai_responses_agent/      # OpenAI Responses API (no framework)
-│   └── community/
-│       ├── langgraph_agentic_rag/       # RAG agent with Milvus vector store
-│       └── langgraph_react_with_database_memory/  # ReAct agent with PostgreSQL memory (FIFO)
-├── run_llama_server.yaml                # Llama Stack server configuration
-├── utils.py                             # Shared utilities
-└── README.md                            # This file
+│   ├── langgraph/
+│   │   ├── react_agent/              # LangGraph ReAct agent
+│   │   ├── agentic_rag/             # LangGraph RAG agent with Milvus
+│   │   └── react_with_database_memory/ # LangGraph ReAct + PostgreSQL memory
+│   ├── crewai/
+│   │   └── websearch_agent/         # CrewAI web search agent
+│   ├── llamaindex/
+│   │   └── websearch_agent/         # LlamaIndex web search agent
+│   └── vanilla_python/
+│       └── openai_responses_agent/  # OpenAI Responses API (no framework)
+└── README.md
 ```
 
 ---

@@ -1,4 +1,5 @@
 .env*
+!.env.example
 .env
 .vscode
 .idea
@@ -10,3 +11,6 @@ __pycache__
 .venv
 dist
 config.toml
+milvus_data/
+*.egg-info/
+uv.lock
