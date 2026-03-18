@@ -1,5 +1,5 @@
 # MCP AutoML Server - OpenShift-ready image (uv)
-# Build from autogen_agent: docker build -f mcp_automl_template/Dockerfile -t <image> mcp_automl_template/
+# Build from mcp_agent: docker build -f mcp_automl_template/Dockerfile -t <image> mcp_automl_template/
 
 FROM python:3.12-slim
 

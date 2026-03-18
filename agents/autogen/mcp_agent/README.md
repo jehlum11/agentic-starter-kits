@@ -18,7 +18,7 @@ The agent uses AutoGen (AssistantAgent) and `autogen_ext.tools.mcp`: it connects
 Go to the agent directory:
 
 ```bash
-cd agents/base/autogen_agent
+cd agents/autogen/mcp_agent
 ```
 
 #### The .env file
@@ -93,7 +93,7 @@ uv pip install -e .
 1. **Terminal 1 — MCP server** (must be running before the agent):
 
    ```bash
-   cd agents/base/autogen_agent/mcp_automl_template
+   cd agents/autogen/mcp_agent/mcp_automl_template
    uv pip install -e .
    PORT=8000 uv run python mcp_server.py
    ```
@@ -101,7 +101,7 @@ uv pip install -e .
 2. **Terminal 2 — Agent:**
 
    ```bash
-   cd agents/base/autogen_agent
+   cd agents/autogen/mcp_agent
    uv run uvicorn main:app --host 0.0.0.0 --port 8080
    ```
 
@@ -126,7 +126,7 @@ Optional: interactive chat with MCP tools (LangGraph) — from the `mcp_automl_t
 
 ```bash
 cd mcp_automl_template
-# Set MCP_SERVER_URL in .env (or in agents/base/autogen_agent/.env)
+# Set MCP_SERVER_URL in .env (or in agents/autogen/mcp_agent/.env)
 uv run python interact_with_mcp.py
 ```
 

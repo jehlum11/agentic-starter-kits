@@ -3,18 +3,18 @@
 # Deploy MCP AutoML Server to OpenShift
 #
 # Usage:
-#   From autogen_agent: ./mcp_automl_template/deploy_mcp.sh
+#   From mcp_agent: ./mcp_automl_template/deploy_mcp.sh
 #   Or from mcp_automl_template: ./deploy_mcp.sh
 #
 # Prerequisites:
 #   - oc CLI installed and logged in to OpenShift cluster
 #   - podman or docker installed
-#   - .env in parent folder (autogen_agent) with CONTAINER_IMAGE_MCP, DEPLOYMENT_URL, DEPLOYMENT_TOKEN
+#   - .env in parent folder (mcp_agent) with CONTAINER_IMAGE_MCP, DEPLOYMENT_URL, DEPLOYMENT_TOKEN
 #
 
 set -e  # Exit on error
 
-# Ensure we run from autogen_agent (parent of this script's dir)
+# Ensure we run from mcp_agent (parent of this script's dir)
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 

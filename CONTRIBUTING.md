@@ -34,7 +34,7 @@ You can optionally add a scope (e.g. the agent or module name) in parentheses af
 ### Examples
 
 ```
-feat: add health check endpoint to autogen_agent
+feat: add health check endpoint to autogen mcp_agent
 fix: correct env var name in deployment in langgraph_react_agent
 docs: update README with OpenShift deploy steps
 test: add tests for tool registration
