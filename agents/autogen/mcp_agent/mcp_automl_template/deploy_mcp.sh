@@ -18,7 +18,8 @@ set -e  # Exit on error
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-source .env
+source "${ROOT}/scripts/load_env_safe.sh"
+load_env_safe "${ROOT}/.env"
 export CONTAINER_IMAGE_MCP DEPLOYMENT_URL DEPLOYMENT_TOKEN
 
 ## ============================================

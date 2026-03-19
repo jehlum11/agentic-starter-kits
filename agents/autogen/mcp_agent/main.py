@@ -17,7 +17,7 @@ from autogen_ext.tools.mcp import (
 )
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from autogen_agent_base.agent import get_agent_chat
@@ -278,10 +278,14 @@ async def chat(request: ChatRequest):
     tags=["Health"],
 )
 async def health():
-    return {
-        "status": "healthy",
-        "agent_initialized": getattr(app.state, "mcp_agent", None) is not None,
+    agent_initialized = getattr(app.state, "mcp_agent", None) is not None
+    body = {
+        "status": "healthy" if agent_initialized else "not_ready",
+        "agent_initialized": agent_initialized,
     }
+    if not agent_initialized:
+        return JSONResponse(status_code=503, content=body)
+    return body
 
 
 if __name__ == "__main__":

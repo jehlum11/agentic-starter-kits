@@ -209,7 +209,7 @@ curl -sN -X POST https://<YOUR_ROUTE_URL>/chat/completions \
 ## Troubleshooting
 
 **Agent gets 503 when connecting to MCP, but `curl https://<mcp-route>/sse` returns 200 from your machine.**  
-Requests from **inside** the cluster (agent pod) to the Route can be handled differently and return 503. Use the **internal Service URL** for `MCP_SERVER_URL` when both are on OpenShift (same namespace): set `MCP_SERVER_URL=http://mcp-automl:8080/sse` in `.env` before running `./deploy.sh`. Leave the Route URL for external clients (e.g. `interact_with_mcp.py`).
+Requests from **inside** the cluster (agent pod) to the Route can be handled differently and return 503. `./deploy.sh` sets the agent’s `MCP_SERVER_URL` from the MCP **Route** when it exists (so the pod does not use the in-cluster Service URL). If you need the internal URL instead, adjust or comment out that block in `deploy.sh` after MCP deploy. **Local** use does not go through `deploy.sh`—set `MCP_SERVER_URL` in `.env` (e.g. `http://127.0.0.1:8000/sse`) for `main.py` / dev only.
 
 **Agent fails with "All connection attempts failed" when using `http://mcp-automl:8080/sse`.**  
 The agent pod cannot reach the MCP service. Check: **(1)** Same namespace — `oc get deployment mcp-automl autogen-agent` (no `-A`); if they are in different namespaces, use the full service DNS: `MCP_SERVER_URL=http://mcp-automl.<mcp-namespace>.svc.cluster.local:8080/sse`. **(2)** MCP has endpoints — `oc get endpoints mcp-automl` (ENDPOINTS should be non-empty). **(3)** Test from a pod — `oc run curl --rm -it --restart=Never --image=curlimages/curl -- curl -v -m 10 http://mcp-automl:8080/sse` (replace namespace in the URL if using FQDN).
