@@ -81,8 +81,7 @@ def chat():
         "stream": True,
     }
 
-    logger.info(f"Sending request to {AGENT_URL}/chat/completions")
-    logger.info(f"Payload: {json.dumps(payload)}")
+    logger.info(f"Sending request to {AGENT_URL}/chat/completions (messages={len(payload.get('messages', []))}, stream={payload.get('stream')})")
 
     def generate():
         try:
