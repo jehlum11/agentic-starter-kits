@@ -12,8 +12,12 @@ load_dotenv()
 # Host from env so FastMCP doesn't auto-enable localhost-only DNS rebinding (which rejects Route host).
 _host = getenv("HOST", "0.0.0.0")
 # Disable DNS rebinding check so any Host (e.g. OpenShift Route) is accepted.
-_transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
-
+disable_dns_rebinding = (
+    getenv("DISABLE_DNS_REBINDING_PROTECTION", "false").lower() == "true"
+)
+_transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=disable_dns_rebinding
+)
 # Create an MCP server
 mcp = FastMCP(
     "MCP AutoML Server",
@@ -55,4 +59,5 @@ if __name__ == "__main__":
             "FastMCP instance has no SSE app callable (sse_app or get_sse_app)"
         )
     port = int(getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port, forwarded_allow_ips="*")
+    forwarded_allow_ips = getenv("UVICORN_FORWARDED_ALLOW_IPS", "*")
+    uvicorn.run(app, host=_host, port=port, forwarded_allow_ips=forwarded_allow_ips)

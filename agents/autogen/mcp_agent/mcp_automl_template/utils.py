@@ -44,7 +44,7 @@ def dataframe_to_json_schema(
                 properties[col] = {"type": "number", "title": col}
         else:
             uniques = series.astype(str).unique().tolist()
-            if len(uniques) <= max_enum_size:
+            if 0 < len(uniques) <= max_enum_size:
                 properties[col] = {
                     "type": "string",
                     "enum": sorted(uniques),
@@ -98,18 +98,28 @@ def json_schema_to_pydantic_model(
 
     for name, prop in props.items():
         if not isinstance(prop, dict):
-            continue
+            raise ValueError(f"Unsupported schema for field {name!r}: {prop!r}")
+        if any(key in prop for key in ("$ref", "anyOf", "oneOf", "allOf")):
+            raise ValueError(
+                f"Unsupported JSON Schema construct in field {name!r}: {prop!r}"
+            )
         typ = prop.get("type", "string")
         enum_vals = prop.get("enum")
 
         if enum_vals is not None:
+            if not enum_vals:
+                raise ValueError(f"Empty enum is not supported for field {name!r}")
             py_type = Literal.__getitem__(tuple(enum_vals))
         elif typ == "integer":
             py_type = int
         elif typ == "number":
             py_type = float
-        else:
+        elif typ == "boolean":
+            py_type = bool
+        elif typ == "string":
             py_type = str
+        else:
+            raise ValueError(f"Unsupported JSON Schema type {typ!r} for field {name!r}")
 
         field_definitions[name] = (
             (py_type, ...) if name in required else (py_type | None, None)
@@ -158,8 +168,10 @@ def get_chat_llama_stack():
     llama_base_url = getenv("LLAMA_STACK_CLIENT_BASE_URL")
     llama_api_key = getenv("LLAMA_STACK_CLIENT_API_KEY")
     model_id = getenv("MODEL_ID")
+    if not llama_base_url or not model_id:
+        raise ValueError("LLAMA_STACK_CLIENT_BASE_URL and MODEL_ID must be set")
 
-    url = llama_base_url.rstrip("/") if llama_base_url else ""
+    url = llama_base_url.rstrip("/")
     if not url.endswith("/v1"):
         url = url + "/v1"
 

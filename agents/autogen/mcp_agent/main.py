@@ -249,6 +249,7 @@ async def chat(request: ChatRequest):
                     }
                 }
                 yield f"data: {json.dumps(err)}\n\n"
+                yield "data: [DONE]\n\n"
 
         return StreamingResponse(
             event_generator(),

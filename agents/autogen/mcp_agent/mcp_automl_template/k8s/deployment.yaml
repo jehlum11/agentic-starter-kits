@@ -31,13 +31,6 @@ spec:
       - name: mcp-automl
         image: "${CONTAINER_IMAGE_MCP}"
         ports:
-    spec:
-      securityContext:
-        runAsNonRoot: true
-      containers:
-      - name: mcp-automl
-        image: "${CONTAINER_IMAGE_MCP}"
-        ports:
         - containerPort: 8080
           name: http
         securityContext:
