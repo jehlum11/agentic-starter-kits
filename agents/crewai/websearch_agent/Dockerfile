@@ -19,8 +19,10 @@ COPY src/ ./src/
 # Install the project and its dependencies using uv
 RUN uv pip install --system --no-cache .
 
-# Copy the application entrypoint
+# Copy the application entrypoint, playground UI, and images
 COPY main.py .
+COPY playground/ ./playground/
+COPY images/ ./images/
 
 # Pre-create the directory that CrewAI writes to at import time
 # (crewai.utilities.paths.db_storage_path -> ~/.local/share/app/)
