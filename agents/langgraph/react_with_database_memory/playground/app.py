@@ -1,12 +1,13 @@
 """
-Playground UI for the CrewAI Web Search Agent.
+Playground UI for the LangGraph ReAct Agent with Database Memory.
 
 A simple Flask chat interface that proxies requests to the agent's
-/chat/completions endpoint with streaming support.
+/chat/completions endpoint with streaming support and thread-based
+conversation persistence.
 
 Usage:
     # Make sure the agent is running first (default: http://localhost:8000)
-    cd agents/crewai/websearch_agent
+    cd agents/langgraph/react_with_database_memory
     flask --app playground/app run --port 5001
 
     # Or with a custom agent URL:
@@ -42,6 +43,7 @@ def serve_image(filename):
     """Serve images from the project-level images directory."""
     return send_file(IMAGES_DIR / filename)
 
+
 AGENT_URL = getenv("AGENT_URL", "http://localhost:8000")
 
 
@@ -62,14 +64,17 @@ def health():
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    """Proxy chat requests to the agent with streaming."""
+    """Proxy chat requests to the agent with streaming and thread support."""
     data = request.get_json()
     messages = data.get("messages", [])
+    thread_id = data.get("thread_id")
 
     payload = {
         "messages": messages,
         "stream": True,
     }
+    if thread_id:
+        payload["thread_id"] = thread_id
 
     logger.info(f"Sending request to {AGENT_URL}/chat/completions")
     logger.info(f"Payload: {json.dumps(payload)}")

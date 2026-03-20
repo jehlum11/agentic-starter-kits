@@ -1,12 +1,12 @@
 """
-Playground UI for the CrewAI Web Search Agent.
+Playground UI for the LangGraph ReAct Agent.
 
 A simple Flask chat interface that proxies requests to the agent's
 /chat/completions endpoint with streaming support.
 
 Usage:
     # Make sure the agent is running first (default: http://localhost:8000)
-    cd agents/crewai/websearch_agent
+    cd agents/langgraph/react_agent
     flask --app playground/app run --port 5001
 
     # Or with a custom agent URL:
@@ -41,6 +41,7 @@ app = Flask(__name__)
 def serve_image(filename):
     """Serve images from the project-level images directory."""
     return send_file(IMAGES_DIR / filename)
+
 
 AGENT_URL = getenv("AGENT_URL", "http://localhost:8000")
 
