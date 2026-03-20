@@ -81,11 +81,11 @@ cd "$LOCAL_DIR" || { echo "ERROR: Directory $LOCAL_DIR not found."; exit 1; }
 
 # Start containerized services (Langflow, PostgreSQL, Langfuse)
 echo ""
-echo "Starting local stack (Langflow + PostgreSQL + Langfuse)..."
+echo "Starting local stack (Langflow + PostgreSQL + Langfuse v3 + ClickHouse + MinIO + Redis)..."
 podman-compose up -d
 
 echo ""
-echo "Waiting for Langflow to start (this may take a minute)..."
+echo "Waiting for Langflow to start (this may take a few minutes)..."
 LANGFLOW_READY=false
 for i in $(seq 1 60); do
   if curl -s http://localhost:7860/health >/dev/null 2>&1; then
@@ -100,6 +100,23 @@ if [ "$LANGFLOW_READY" = false ]; then
   echo "ERROR: Langflow did not start within 5 minutes."
   echo "Check logs: podman logs local_langflow_1"
   exit 1
+fi
+
+echo ""
+echo "Waiting for Langfuse to start (this may take several minutes)..."
+LANGFUSE_READY=false
+for i in $(seq 1 60); do
+  if curl -s http://localhost:3000/api/public/health >/dev/null 2>&1; then
+    LANGFUSE_READY=true
+    echo "Langfuse is ready!"
+    break
+  fi
+  sleep 10
+done
+
+if [ "$LANGFUSE_READY" = false ]; then
+  echo "WARNING: Langfuse did not start within 10 minutes. Tracing and logging will not work until it is up."
+  echo "Check logs: podman logs local_langfuse-web_1"
 fi
 
 echo ""

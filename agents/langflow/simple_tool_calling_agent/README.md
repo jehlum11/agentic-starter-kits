@@ -8,9 +8,12 @@
 
 ## What this agent does
 
-Outdoor activity planning agent built with Langflow. It recommends the best day and time for outdoor activities by reasoning across weather forecasts, air quality, and National Park Service data.
+Outdoor activity assistant built with Langflow. It helps you decide whether conditions are good for any outdoor activity — walking, hiking, cycling, picnics, park visits, or anything else outside. It reasons across weather forecasts and National Park Service data to give a clear recommendation.
 
-**Example query:** *"I want to go hiking near Denver this weekend. What day is best?"*
+**Example queries:**
+- *"Can I go walking in Boston tomorrow at 3 PM?"*
+- *"I want to go hiking near Denver this weekend. What day is best?"*
+- *"Is it a good day for a picnic in San Francisco?"*
 
 ### Tools
 | Tool | API | Description |
@@ -52,9 +55,9 @@ chmod +x deploy-local.sh cleanup-local.sh
 
 This starts:
 - **Langflow** on http://localhost:7860 — the agent UI
-- **PostgreSQL** — shared database server. Hosts two databases: `langflow` (flows, users, settings) and `langfuse` (traces). The `langflow` database is created automatically by PostgreSQL; the `langfuse` database is created by `local/init-db.sh` on first startup
+- **PostgreSQL** — shared database server. Hosts two databases: `langflow` (flows, users, settings) and `langfuse` (metadata). The `langflow` database is created automatically by PostgreSQL; the `langfuse` database is created by `local/init-db.sh` on first startup
 - **Ollama** on http://localhost:11434 — local LLM (qwen2.5:7b), runs natively on host for GPU acceleration
-- **Langfuse v2** on http://localhost:3000 — tracing (admin@langflow.local / admin123)
+- **Langfuse v3** on http://localhost:3000 — tracing (admin@langflow.local / admin123), backed by ClickHouse, MinIO, and Redis
 
 ### Import and configure the flow
 
@@ -102,8 +105,9 @@ On the cluster, replace `localhost:7860` with your cluster's Langflow route URL.
 |------|---------------------|----------------------------|
 | Downloaded Ollama models (e.g., qwen2.5:7b) | Kept | Kept (stored on host, not in containers) |
 | Imported Langflow flows | Kept | **Deleted** (re-import needed) |
-| Langfuse traces | Kept | **Deleted** |
+| Langfuse traces (ClickHouse + MinIO) | Kept | **Deleted** |
 | PostgreSQL data | Kept | **Deleted** |
+| Redis cache | Kept | **Deleted** |
 | `.env` and `.ollama-enabled` config | Kept | **Deleted** |
 
 ---
