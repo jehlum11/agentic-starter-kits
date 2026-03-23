@@ -39,7 +39,7 @@ Edit the `.env` file with your local configuration:
 
 **OpenAI API** directly:
 
-```
+```ini
 BASE_URL=https://api.openai.com/v1
 MODEL_ID=gpt-4o-mini
 API_KEY=sk-...
@@ -48,7 +48,7 @@ CONTAINER_IMAGE=not-needed
 
 ##### Tracing
 
-```
+```ini
 MLFLOW_TRACKING_URI="http://localhost:5000"
 MLFLOW_EXPERIMENT_NAME="OpenAI Responses Local Experiment"
 MLFLOW_HTTP_REQUEST_TIMEOUT=2
@@ -59,7 +59,7 @@ MLFLOW_HTTP_REQUEST_MAX_RETRIES=0
 
 Edit the `.env` file and fill in all required values:
 
-```
+```ini
 API_KEY=your-api-key-here
 BASE_URL=https://your-llama-stack-distribution.com/v1
 MODEL_ID=llama-3.1-8b-instruct
@@ -86,7 +86,7 @@ CONTAINER_IMAGE=quay.io/your-username/openai-responses-agent:latest
 
 To enable tracing and logging with MLflow on your OpenShift cluster, add the following environment variables to your `.env` file:
 
-```
+```ini
 MLFLOW_TRACKING_URI="https://<openshift-dashboard-url>/mlflow"
 MLFLOW_TRACKING_TOKEN="<your-openshift-token>"
 MLFLOW_EXPERIMENT_NAME="<your-experiment-name>"

@@ -66,7 +66,6 @@ class _AIAgentAdapter:
         self._model_id = model_id
         self._api_key = api_key
         self._tools = tools or []
-        self._mlflow_enabled = bool(getenv("MLFLOW_TRACKING_URI"))
 
     async def run(self, input: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -108,6 +107,9 @@ def _messages_to_responses_input(messages: List[Dict]) -> tuple[str, List[Dict]]
     for m in messages:
         role = m.get("role", "user")
         content = m.get("content", "") or ""
+        if role == "system":
+            instructions = content
+            continue
         if role == "assistant":
             content_type = "output_text"
         else:

@@ -2,7 +2,6 @@ from os import getenv
 import time
 import requests
 from dotenv import load_dotenv
-from fastapi import HTTPException
 from typing import Optional, Callable
 
 import logging
@@ -39,7 +38,7 @@ def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 60, retry
                 logger.warning(
                     f"MLflow returned status code {response.status_code} at {mlflow_url}\n"
                     f"  Status Code: {response.status_code}\n"
-                    f"  Reason: {response.reason_phrase}\n"
+                    f"  Reason: {response.reason}\n"
                     f"  Response Body: {response.text[:500]}"
                 )
         except requests.exceptions.RequestException as e:
@@ -98,11 +97,11 @@ def enable_tracing() -> None:
     try:
         check_mlflow_health(mlflow_tracking_uri=tracking_uri)
         logger.info(f"[Tracing] MLflow server is reachable at {tracking_uri}")
-    except HTTPException as e:
+    except RuntimeError as e:
         logger.warning(f"[Tracing] MLflow server is unreachable at {tracking_uri}")
         raise RuntimeError(
                     f"MLFLOW_TRACKING_URI is set but server is unreachable: {tracking_uri}. "
-                    f"Start the server or check the URI. Error: {e.detail}"
+                    f"Start the server or check the URI. Error: {e}"
                 )
 
     # Server is reachable → enable tracing
