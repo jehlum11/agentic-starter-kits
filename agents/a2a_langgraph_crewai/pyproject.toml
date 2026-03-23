@@ -1,7 +1,7 @@
 [project]
 name = "a2a-langgraph-crewai"
 version = "0.1.0"
-description = "A2A demo: LangGraph orchestrator calls CrewAI specialist over JSON-RPC (a2a-sdk)."
+description = "A2A demo: LangGraph orchestrator and CrewAI specialist for OpenShift (a2a-sdk)."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,6 +19,5 @@ dependencies = [
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-# Script-style layout: same directory as pyproject.toml
 [tool.setuptools]
 py-modules = ["a2a_reply", "crew_a2a_server", "langgraph_a2a_server", "demo_client"]

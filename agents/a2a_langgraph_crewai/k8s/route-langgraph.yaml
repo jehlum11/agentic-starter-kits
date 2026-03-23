@@ -1,0 +1,16 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: a2a-langgraph-agent
+  labels:
+    app: a2a-langgraph-agent
+    app.kubernetes.io/part-of: a2a-langgraph-crewai
+spec:
+  to:
+    kind: Service
+    name: a2a-langgraph-agent
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

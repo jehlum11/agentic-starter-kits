@@ -1,0 +1,10 @@
+.venv
+__pycache__
+*.pyc
+.env
+.git
+k8s
+*.md
+deploy.sh
+template.env
+demo_client.py

@@ -49,7 +49,9 @@ def a2a_result_to_text(result: Message | Task | Any) -> str:
     return str(result)
 
 
-async def send_a2a_text_message(base_url: str, text: str, timeout: float = 120.0) -> str:
+async def send_a2a_text_message(
+    base_url: str, text: str, timeout: float = 120.0
+) -> str:
     """Fetch agent card, send one user text message, return assistant text."""
     base = base_url.rstrip("/")
     async with httpx.AsyncClient(timeout=timeout) as client:

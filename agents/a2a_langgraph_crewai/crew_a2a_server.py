@@ -2,6 +2,7 @@
 CrewAI agent exposed as an A2A server (JSON-RPC over HTTP via a2a-sdk).
 
 Run: uv run python crew_a2a_server.py
+OpenShift: PORT=8080 (set by platform); local default CREW_A2A_PORT=9100.
 """
 
 from __future__ import annotations
@@ -27,6 +28,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 _llm: LLM | None = None
+
+
+def _listen_port() -> int:
+    """OpenShift sets PORT=8080; locally use CREW_A2A_PORT (default 9100)."""
+    if p := getenv("PORT"):
+        return int(p)
+    return int(getenv("CREW_A2A_PORT", "9100"))
 
 
 def _ensure_llm() -> LLM:
@@ -88,15 +96,13 @@ class CrewA2AExecutor(AgentExecutor):
                 new_agent_text_message(f"CrewAI error: {e!s}")
             )
 
-    async def cancel(
-        self, context: RequestContext, event_queue: EventQueue
-    ) -> None:
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         raise NotImplementedError("cancel not supported in this demo")
 
 
 def main() -> None:
     public_base = getenv("CREW_A2A_PUBLIC_URL", "http://127.0.0.1:9100").rstrip("/")
-    port = int(getenv("CREW_A2A_PORT", "9100"))
+    port = _listen_port()
 
     skill = AgentSkill(
         id="crew_specialist",

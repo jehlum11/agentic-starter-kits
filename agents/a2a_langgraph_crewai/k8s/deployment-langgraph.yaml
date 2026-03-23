@@ -1,0 +1,71 @@
+# LangGraph A2A orchestrator — build image with: docker build --build-arg A2A_ROLE=langgraph ...
+#
+# Calls Crew in-cluster: CREW_A2A_URL must match Service a2a-crew-agent:8080
+# Required envsubst: CONTAINER_IMAGE_LANGGRAPH, LANGGRAPH_A2A_PUBLIC_URL, BASE_URL, MODEL_ID
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-langgraph-agent
+  labels:
+    app: a2a-langgraph-agent
+    app.kubernetes.io/part-of: a2a-langgraph-crewai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: a2a-langgraph-agent
+  template:
+    metadata:
+      labels:
+        app: a2a-langgraph-agent
+    spec:
+      containers:
+        - name: a2a-langgraph-agent
+          image: "${CONTAINER_IMAGE_LANGGRAPH}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: LANGGRAPH_A2A_PUBLIC_URL
+              value: "${LANGGRAPH_A2A_PUBLIC_URL}"
+            # In-cluster JSON-RPC + agent card fetch for the Crew peer
+            - name: CREW_A2A_URL
+              value: "http://a2a-crew-agent:8080"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-langgraph-crewai-secrets
+                  key: api-key
+            - name: BASE_URL
+              value: "${BASE_URL}"
+            - name: MODEL_ID
+              value: "${MODEL_ID}"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /.well-known/agent-card.json
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 25
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /.well-known/agent-card.json
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6

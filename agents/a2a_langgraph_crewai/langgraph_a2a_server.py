@@ -2,6 +2,7 @@
 LangGraph ReAct-style orchestrator exposed as A2A; delegates to the CrewAI A2A agent via tool.
 
 Run (after crew_a2a_server): uv run python langgraph_a2a_server.py
+OpenShift: PORT=8080; set CREW_A2A_URL to the in-cluster Service URL (e.g. http://a2a-crew-agent:8080).
 """
 
 from __future__ import annotations
@@ -31,6 +32,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 _graph = None
+
+
+def _listen_port() -> int:
+    if p := getenv("PORT"):
+        return int(p)
+    return int(getenv("LANGGRAPH_A2A_PORT", "9200"))
 
 
 def _crew_base_url() -> str:
@@ -130,9 +137,7 @@ class LangGraphA2AExecutor(AgentExecutor):
                 new_agent_text_message(f"LangGraph error: {e!s}")
             )
 
-    async def cancel(
-        self, context: RequestContext, event_queue: EventQueue
-    ) -> None:
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
         raise NotImplementedError("cancel not supported in this demo")
 
 
@@ -140,14 +145,17 @@ def main() -> None:
     public_base = getenv("LANGGRAPH_A2A_PUBLIC_URL", "http://127.0.0.1:9200").rstrip(
         "/"
     )
-    port = int(getenv("LANGGRAPH_A2A_PORT", "9200"))
+    port = _listen_port()
 
     skill = AgentSkill(
         id="langgraph_orchestrator",
         name="LangGraph orchestrator",
         description="ReAct-style agent that can delegate to a CrewAI peer over A2A.",
         tags=["langgraph", "text", "a2a"],
-        examples=["What is 2+2?", "Ask the specialist to explain agent-to-agent protocols."],
+        examples=[
+            "What is 2+2?",
+            "Ask the specialist to explain agent-to-agent protocols.",
+        ],
     )
 
     agent_card = AgentCard(

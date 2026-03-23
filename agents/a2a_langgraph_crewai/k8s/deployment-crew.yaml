@@ -1,0 +1,68 @@
+# CrewAI A2A specialist — build image with: docker build --build-arg A2A_ROLE=crew ...
+#
+# Required envsubst vars: CONTAINER_IMAGE_CREW, CREW_A2A_PUBLIC_URL, BASE_URL, MODEL_ID
+# Secret: a2a-langgraph-crewai-secrets (key api-key)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-crew-agent
+  labels:
+    app: a2a-crew-agent
+    app.kubernetes.io/part-of: a2a-langgraph-crewai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: a2a-crew-agent
+  template:
+    metadata:
+      labels:
+        app: a2a-crew-agent
+    spec:
+      containers:
+        - name: a2a-crew-agent
+          image: "${CONTAINER_IMAGE_CREW}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: CREW_A2A_PUBLIC_URL
+              value: "${CREW_A2A_PUBLIC_URL}"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-langgraph-crewai-secrets
+                  key: api-key
+            - name: BASE_URL
+              value: "${BASE_URL}"
+            - name: MODEL_ID
+              value: "${MODEL_ID}"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /.well-known/agent-card.json
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /.well-known/agent-card.json
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
