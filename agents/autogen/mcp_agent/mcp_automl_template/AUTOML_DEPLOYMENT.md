@@ -158,7 +158,7 @@ Set `DEPLOYMENT_URL` (and `DEPLOYMENT_TOKEN` if used) to your churn predict endp
 In the MCP server directory, ensure `.env` exists and contains the deployment values from Phase 2:
 
 ```bash
-cp template.env .env
+mv template.env .env
 ```
 
 Edit `.env`:

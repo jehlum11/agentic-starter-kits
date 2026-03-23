@@ -1,6 +1,6 @@
 import asyncio
-import os
 import textwrap
+from os import getenv
 from utils import get_chat_from_env
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -8,7 +8,7 @@ from mcp.client.sse import sse_client
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 
-# Use BASE_URL + MODEL_ID + API_KEY from .env (same as autogen agent); fallback: Ollama
+# LLM from .env: BASE_URL, MODEL_ID, API_KEY (see repo template.env; Ollama example there)
 chat_openai = get_chat_from_env()
 
 # Dictionary of predefined questions with descriptions
@@ -39,7 +39,7 @@ async def ask_question(agent, user_input: str):
 
 # Main chat loop
 async def chat_loop():
-    mcp_url = os.environ.get("MCP_SERVER_URL", "http://127.0.0.1:8000/sse")
+    mcp_url = getenv("MCP_SERVER_URL", "http://127.0.0.1:8000/sse")
     print(mcp_url)
     async with sse_client(url=mcp_url) as (read, write):
         async with ClientSession(read, write) as session:

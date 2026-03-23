@@ -7,7 +7,7 @@ optionally deployment_url_env and deployment_token_env for HTTP deployment.
 
 import inspect
 import json
-import os
+from os import getenv
 from pathlib import Path
 from typing import Any
 
@@ -77,8 +77,8 @@ def _make_tool_handler_flat(
         valid = {name: cleaned.get(name) for name in fields}
         instance = model_class(**valid)
         if deployment_url_env and deployment_token_env:
-            url = os.environ.get(deployment_url_env)
-            token = os.environ.get(deployment_token_env)
+            url = getenv(deployment_url_env)
+            token = getenv(deployment_token_env)
             if url and token:
                 payload = instance.model_dump()
                 data = {"instances": [{key: [val] for key, val in payload.items()}]}

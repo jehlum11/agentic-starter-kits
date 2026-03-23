@@ -110,16 +110,20 @@ def json_schema_to_pydantic_model(
             if not enum_vals:
                 raise ValueError(f"Empty enum is not supported for field {name!r}")
             py_type = Literal.__getitem__(tuple(enum_vals))
-        elif typ == "integer":
-            py_type = int
-        elif typ == "number":
-            py_type = float
-        elif typ == "boolean":
-            py_type = bool
-        elif typ == "string":
-            py_type = str
         else:
-            raise ValueError(f"Unsupported JSON Schema type {typ!r} for field {name!r}")
+            match typ:
+                case "integer":
+                    py_type = int
+                case "number":
+                    py_type = float
+                case "boolean":
+                    py_type = bool
+                case "string":
+                    py_type = str
+                case _:
+                    raise ValueError(
+                        f"Unsupported JSON Schema type {typ!r} for field {name!r}"
+                    )
 
         field_definitions[name] = (
             (py_type, ...) if name in required else (py_type | None, None)
@@ -128,38 +132,34 @@ def json_schema_to_pydantic_model(
     return create_model(class_name, **field_definitions)
 
 
-def get_chat_openai():
-    """Ollama local (fallback when BASE_URL/MODEL_ID not set)."""
-    from langchain_openai import ChatOpenAI
-
-    return ChatOpenAI(
-        model="llama3.2",
-        base_url="http://localhost:11434/v1",
-        api_key="ollama",
-    )
-
-
 def get_chat_from_env():
     """
-    Chat client from env: BASE_URL, MODEL_ID, API_KEY (same as autogen agent).
-    Uses OpenAI-compatible API (e.g. Llama Stack). Falls back to Ollama if not set.
+    ChatOpenAI from BASE_URL, MODEL_ID, and optional API_KEY (OpenAI-compatible API:
+    Llama Stack, Ollama, OpenAI, …). Configure everything in `.env` — no separate code path
+    for Ollama; use e.g. BASE_URL=http://localhost:11434/v1, MODEL_ID=llama3.2, API_KEY=ollama.
     """
     from langchain_openai import ChatOpenAI
 
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")
     api_key = getenv("API_KEY")
-    if base_url and model_id:
-        url = base_url.rstrip("/")
-        if not url.endswith("/v1"):
-            url = url + "/v1"
-        return ChatOpenAI(
-            base_url=url,
-            model=model_id,
-            api_key=api_key or "not-needed",
-            temperature=0.1,
-        )
-    return get_chat_openai()
+    if base_url is not None:
+        base_url = base_url.strip().rstrip("/")
+    if model_id is not None:
+        model_id = model_id.strip()
+    if api_key is not None:
+        api_key = api_key.strip()
+    if not base_url or not model_id:
+        raise ValueError("BASE_URL and MODEL_ID must be set (e.g. in .env). ")
+    url = base_url
+    if not url.endswith("/v1"):
+        url = url + "/v1"
+    return ChatOpenAI(
+        base_url=url,
+        model=model_id,
+        api_key=api_key or "not-needed",
+        temperature=0.1,
+    )
 
 
 def get_chat_llama_stack():
@@ -168,10 +168,16 @@ def get_chat_llama_stack():
     llama_base_url = getenv("LLAMA_STACK_CLIENT_BASE_URL")
     llama_api_key = getenv("LLAMA_STACK_CLIENT_API_KEY")
     model_id = getenv("MODEL_ID")
+    if llama_base_url is not None:
+        llama_base_url = llama_base_url.strip().rstrip("/")
+    if model_id is not None:
+        model_id = model_id.strip()
+    if llama_api_key is not None:
+        llama_api_key = llama_api_key.strip()
     if not llama_base_url or not model_id:
         raise ValueError("LLAMA_STACK_CLIENT_BASE_URL and MODEL_ID must be set")
 
-    url = llama_base_url.rstrip("/")
+    url = llama_base_url
     if not url.endswith("/v1"):
         url = url + "/v1"
 

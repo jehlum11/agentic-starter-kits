@@ -26,7 +26,7 @@ cd agents/autogen/mcp_agent
 If `template.env` exists, copy it to `.env`:
 
 ```bash
-cp template.env .env
+mv template.env .env
 ```
 
 Edit `.env`.

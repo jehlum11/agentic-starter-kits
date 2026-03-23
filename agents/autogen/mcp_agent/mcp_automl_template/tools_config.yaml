@@ -3,8 +3,7 @@
 
 tools:
   - name: invoke_churn
-    description: |
-      Invoke deployment for Telco customer churn prediction. Provide input fields matching the churn schema (e.g. gender, tenure, Contract, MonthlyCharges). Use when the user asks about churn likelihood or whether a customer will churn.
+    description: Invoke deployment for Telco customer churn prediction. Provide input fields matching the churn schema (e.g. gender, tenure, Contract, MonthlyCharges). Use when the user asks about churn likelihood or whether a customer will churn.
     schema_path: churn_schema.json
     deployment_url_env: DEPLOYMENT_URL
     deployment_token_env: DEPLOYMENT_TOKEN

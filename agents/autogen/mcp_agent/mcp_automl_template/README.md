@@ -58,17 +58,17 @@ mcp_automl_template/
 
 1. **Install dependencies**
 
+   With [uv](https://docs.astral.sh/uv/):
    ```bash
-   pip install .
+   uv pip install .
    ```
-   Or with [uv](https://docs.astral.sh/uv/): `uv pip install .`
 
 2. **Environment**
 
    Copy `template.env` from the parent folder to `.env` and set real values for every variable:
 
    ```bash
-   cp ../template.env .env
+   mv ../template.env .env
    ```
 
    Your `.env` file must include **all** variables defined in `template.env`:
@@ -101,8 +101,7 @@ Example:
 ```yaml
 tools:
   - name: invoke_churn
-    description: |
-      Invoke deployment for Telco customer churn prediction.
+    description: Invoke deployment for Telco customer churn prediction.
     schema_path: churn_schema.json
     deployment_url_env: DEPLOYMENT_URL
     deployment_token_env: DEPLOYMENT_TOKEN
@@ -172,7 +171,7 @@ Ollama’s CLI does not run MCP clients. To use this MCP server with Ollama you 
 - **Ollamac** (macOS): In MCP settings, add a **remote** server with URL `http://127.0.0.1:8000/sse` (with this MCP server already running). Use a tool-capable model (e.g. Llama 3.1+, Mistral).
 - **Other MCP clients:** Any client that supports SSE can use `http://127.0.0.1:8000/sse` once this server is running.
 
-**Alternative:** Use the included demo client with Ollama: run `interact_with_mcp.py`; it uses `get_chat_openai()` from `utils` pointed at Ollama, and the agent will call this MCP server’s tools while using Ollama as the LLM.
+**Alternative:** Use the included demo client: run `interact_with_mcp.py`. It uses `get_chat_from_env()` (same `BASE_URL` / `MODEL_ID` / `API_KEY` as the main agent). For local Ollama, set those in `.env` (see root `template.env` example). The agent will call this MCP server’s tools using that LLM.
 
 ## Adding a new tool
 

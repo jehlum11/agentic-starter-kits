@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 import time
 import traceback
 import uuid
@@ -107,7 +106,7 @@ async def _mcp_agent_holder(
     mcp_url = getenv("MCP_SERVER_URL")
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")
-    api_key = os.environ.get("API_KEY", "")
+    api_key = getenv("API_KEY", "")
     if base_url and not base_url.endswith("/v1"):
         base_url = base_url.rstrip("/") + "/v1"
 
