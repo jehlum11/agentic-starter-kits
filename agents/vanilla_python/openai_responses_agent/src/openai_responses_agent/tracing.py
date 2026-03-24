@@ -54,24 +54,24 @@ def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 5, retry_
 
 # Wrapping functions for tools and agents with MLflow tracing
 def wrap_func_with_mlflow_trace(func: Callable, span_type: Literal["tool", "agent"]) -> Callable:
-        """
-        Wrap a function with MLflow.trace(span_type=SpanType.<type>) if MLflow is enabled.
+    """
+    Wrap a function with MLflow.trace(span_type=SpanType.<type>) if MLflow is enabled.
 
-        Returns the original function if MLflow is not installed or tracing is disabled.
-        """
-        tracking_uri: Optional[str] = getenv("MLFLOW_TRACKING_URI")
-        if not tracking_uri:
-            return func
+    Returns the original function if MLflow is not installed or tracing is disabled.
+    """
+    tracking_uri: Optional[str] = getenv("MLFLOW_TRACKING_URI")
+    if not tracking_uri:
+        return func
 
-        import mlflow
-        from mlflow.entities import SpanType
+    import mlflow
+    from mlflow.entities import SpanType
 
-        if span_type == "tool":
-            return mlflow.trace(span_type=SpanType.TOOL)(func)
-        elif span_type == "agent":
-            return mlflow.trace(span_type=SpanType.AGENT)(func)
-        else:
-            raise ValueError(f"Unsupported trace type: {span_type}")
+    if span_type == "tool":
+        return mlflow.trace(span_type=SpanType.TOOL)(func)
+    elif span_type == "agent":
+        return mlflow.trace(span_type=SpanType.AGENT)(func)
+    else:
+        raise ValueError(f"Unsupported trace type: {span_type}")
 
 def enable_tracing() -> None:
     """
