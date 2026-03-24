@@ -10,10 +10,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from pydantic import BaseModel, Field
+from agentic_rag.agent import get_graph_closure
 
 logger = logging.getLogger(__name__)
-
-from agentic_rag.agent import get_graph_closure
 
 
 # OpenAI-compatible request/response models
