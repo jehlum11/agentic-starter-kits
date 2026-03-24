@@ -6,7 +6,7 @@ authors = [{ name = "Your Name", email = "you@example.com" }]
 license = { text = "MIT" }
 requires-python = ">=3.12,<=3.14"
 dependencies = [
-    "fastapi>=0.129.0",
+    "fastapi>=0.132.0",
     "uvicorn[standard]>=0.41.0",
     "langchain>=1.2.10",
     "langchain-openai>=1.1.10",
@@ -14,10 +14,12 @@ dependencies = [
     "llama-stack>=0.5.0",
     "openai>=2.24.0",
     "milvus-lite>=2.5.1",
+    "pymilvus==2.6.9", # <-- 2.6.10 has a bug https://github.com/milvus-io/pymilvus/issues/3317
     "python-dotenv>=1.2.2",
     "setuptools>=80.9.0,<82.0.0",
     "chardet>=7.1.0",
     "pypdf>=6.9.0",
+    "flask>=3.1.0",
 ]
 
 [project.optional-dependencies]

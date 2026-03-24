@@ -18,6 +18,7 @@ dependencies = [
     "milvus-lite>=2.5.1",
     "setuptools>=80.9.0,<82.0.0",
     "python-dotenv>=1.2.2",
+    "flask>=3.1.0",
 ]
 
 [project.optional-dependencies]

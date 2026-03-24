@@ -1,3 +1,4 @@
+import inspect
 import sys
 import os
 
@@ -103,8 +104,6 @@ def test_dummy_web_search_docstring():
 
 def test_dummy_web_search_function_signature():
     """Test that dummy_web_search has the correct function signature."""
-    import inspect
-
     # Get function signature
     sig = inspect.signature(dummy_web_search)
     params = list(sig.parameters.keys())
@@ -116,8 +115,6 @@ def test_dummy_web_search_function_signature():
 
 def test_dummy_web_search_type_hints():
     """Test that dummy_web_search has proper type hints."""
-    import inspect
-
     # Get type hints
     hints = inspect.get_annotations(dummy_web_search)
 

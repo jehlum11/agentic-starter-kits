@@ -210,6 +210,52 @@ curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
 
 ---
 
+## Playground UI
+
+A browser-based chat interface is served directly by the agent at the root URL — no separate process needed.
+
+### Running the Playground
+
+Start the agent and open the root URL in your browser:
+
+```bash
+uvicorn main:app --port 8000
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser.
+
+A green dot in the header means the agent is connected and ready. Type a message and press **Enter** to send.
+
+When deployed to OpenShift, the playground is available at the route URL.
+
+### Standalone Flask Playground (alternative)
+
+You can also run the playground as a separate Flask app if needed:
+
+```bash
+uv pip install flask
+```
+
+```bash
+# Terminal 1: Start the agent
+uvicorn main:app --port 8000
+
+# Terminal 2: Start the playground
+flask --app playground/app run --port 5001
+```
+
+| Variable    | Default                  | Description                     |
+|-------------|--------------------------|---------------------------------|
+| `AGENT_URL` | `http://localhost:8000`  | URL of the running agent API    |
+
+If the agent runs on a different host or port:
+
+```bash
+AGENT_URL=https://your-agent-url flask --app playground/app run --port 5001
+```
+
+---
+
 ## Agent-Specific Documentation
 
 Each agent has detailed documentation for setup and deployment:

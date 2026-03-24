@@ -45,6 +45,8 @@ spec:
               value: "${MODEL_ID}"
             - name: EMBEDDING_MODEL
               value: "${EMBEDDING_MODEL}"
+            - name: EMBEDDING_DIMENSION
+              value: "${EMBEDDING_DIMENSION:-768}"
             - name: VECTOR_STORE_ID
               value: "${VECTOR_STORE_ID}"
             - name: VECTOR_STORE_PATH

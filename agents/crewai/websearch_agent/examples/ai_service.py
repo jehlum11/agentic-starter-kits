@@ -1,3 +1,5 @@
+from os import getenv
+
 from crewai import LLM
 from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.tools.tool_types import ToolResult
@@ -20,8 +22,6 @@ def ai_stream_service(context, base_url=None, model_id=None):
     Returns:
         Tuple (generate, generate_stream).
     """
-    from os import getenv
-
     api_key = getenv("API_KEY", "no-key")
 
     if base_url and not base_url.endswith("/v1"):

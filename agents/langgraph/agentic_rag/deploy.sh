@@ -17,6 +17,13 @@ source .env
 export CONTAINER_IMAGE BASE_URL MODEL_ID EMBEDDING_MODEL VECTOR_STORE_NAME VECTOR_STORE_ID
 
 ## ============================================
+# COPY SHARED IMAGES FOR DOCKER BUILD CONTEXT
+## ============================================
+
+cp -r ../../../images ./images && echo "Images copied into build context"
+trap 'rm -rf ./images' EXIT
+
+## ============================================
 # DOCKER BUILD
 ## ============================================
 
