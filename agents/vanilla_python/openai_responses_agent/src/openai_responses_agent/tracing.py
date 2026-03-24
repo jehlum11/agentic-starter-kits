@@ -29,8 +29,13 @@ def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 5, retry_
     start_time = time.time()
 
     while True:
+        remaining = max_wait_time - (time.time() - start_time)
+        if remaining <= 0:
+            logger.error(f"MLflow server is unavailable after {max_wait_time} seconds of checking.")
+            raise RuntimeError("MLflow server is unavailable. Please start the server or check the URI.")
+
         try:
-            response = requests.get(mlflow_url, timeout=5)
+            response = requests.get(mlflow_url, timeout=min(5, remaining))
             if response.status_code == 200:
                 logger.info(f"MLflow health check passed at {mlflow_url} with status code {response.status_code}.")
                 return  # Success, exit the function without error
@@ -43,11 +48,6 @@ def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 5, retry_
                 )
         except requests.exceptions.RequestException as e:
             logger.warning(f"Failed to connect to MLflow at {mlflow_url}: {e}")
-
-        elapsed_time = time.time() - start_time
-        if elapsed_time >= max_wait_time:
-            logger.error(f"MLflow server is unavailable after {max_wait_time} seconds of checking.")
-            raise RuntimeError("MLflow server is unavailable. Please start the server or check the URI.")
 
         logger.warning(f"Retrying in {retry_interval} seconds...")
         time.sleep(retry_interval)
@@ -95,7 +95,10 @@ def enable_tracing() -> None:
 
     # Check if server is reachable
     try:
-        health_check_timeout = int(getenv("MLFLOW_HEALTH_CHECK_TIMEOUT", "5"))
+        try:
+            health_check_timeout = int(getenv("MLFLOW_HEALTH_CHECK_TIMEOUT", "5"))
+        except ValueError:
+            health_check_timeout = 5
         check_mlflow_health(mlflow_tracking_uri=tracking_uri, max_wait_time=health_check_timeout)
         logger.info(f"[Tracing] MLflow server is reachable at {tracking_uri}")
     except RuntimeError as e:
