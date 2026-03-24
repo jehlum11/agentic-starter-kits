@@ -82,7 +82,7 @@ def enable_tracing() -> None:
     2. If MLFLOW_TRACKING_URI is set:
        - Try to connect to the server.
        - If the server is reachable: tracing is enabled.
-       - If the server is unreachable: raise RuntimeError and crash the application.
+       - If the server is unreachable: log a warning and continue without tracing.
     """
     load_dotenv()
     tracking_uri: Optional[str] = getenv("MLFLOW_TRACKING_URI")
@@ -99,11 +99,11 @@ def enable_tracing() -> None:
         check_mlflow_health(mlflow_tracking_uri=tracking_uri, max_wait_time=health_check_timeout)
         logger.info(f"[Tracing] MLflow server is reachable at {tracking_uri}")
     except RuntimeError as e:
-        logger.warning(f"[Tracing] MLflow server is unreachable at {tracking_uri}")
-        raise RuntimeError(
-            f"MLFLOW_TRACKING_URI is set but server is unreachable: {tracking_uri}. "
-            f"Start the server or check the URI. Error: {e}"
-        ) from e
+        logger.warning(
+            f"[Tracing] MLflow server is unreachable at {tracking_uri}. "
+            f"Tried connecting for {health_check_timeout}s. Continuing without tracing. Error: {e}"
+        )
+        return
 
     # Server is reachable → enable tracing
     mlflow.set_tracking_uri(tracking_uri)
