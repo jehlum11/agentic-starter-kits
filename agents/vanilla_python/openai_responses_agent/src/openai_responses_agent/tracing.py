@@ -2,7 +2,7 @@ from os import getenv
 import time
 import requests
 from dotenv import load_dotenv
-from typing import Optional, Callable
+from typing import Callable, Literal, Optional
 
 import logging
 
@@ -16,7 +16,7 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 60, retry_interval: int = 1) -> None:
+def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 5, retry_interval: int = 1) -> None:
     """
     Check MLflow health by trying the /health endpoint. If it fails, retry for a certain duration before giving up.
     args:
@@ -53,7 +53,7 @@ def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 60, retry
         time.sleep(retry_interval)
 
 # Wrapping functions for tools and agents with MLflow tracing
-def wrap_func_with_mlflow_trace(func: Callable, type:str) -> Callable:
+def wrap_func_with_mlflow_trace(func: Callable, span_type: Literal["tool", "agent"]) -> Callable:
         """
         Wrap a function with MLflow.trace(span_type=SpanType.<type>) if MLflow is enabled.
 
@@ -66,12 +66,12 @@ def wrap_func_with_mlflow_trace(func: Callable, type:str) -> Callable:
         import mlflow
         from mlflow.entities import SpanType
 
-        if type == "tool":
-            return mlflow.trace(span_type=SpanType.TOOL)(func) # calling decorator mlflow.trace(args) directly
-        elif type == "agent":
+        if span_type == "tool":
+            return mlflow.trace(span_type=SpanType.TOOL)(func)
+        elif span_type == "agent":
             return mlflow.trace(span_type=SpanType.AGENT)(func)
         else:
-            raise ValueError(f"Unsupported trace type: {type}")
+            raise ValueError(f"Unsupported trace type: {span_type}")
 
 def enable_tracing() -> None:
     """
@@ -95,14 +95,15 @@ def enable_tracing() -> None:
 
     # Check if server is reachable
     try:
-        check_mlflow_health(mlflow_tracking_uri=tracking_uri)
+        health_check_timeout = int(getenv("MLFLOW_HEALTH_CHECK_TIMEOUT", "5"))
+        check_mlflow_health(mlflow_tracking_uri=tracking_uri, max_wait_time=health_check_timeout)
         logger.info(f"[Tracing] MLflow server is reachable at {tracking_uri}")
     except RuntimeError as e:
         logger.warning(f"[Tracing] MLflow server is unreachable at {tracking_uri}")
         raise RuntimeError(
-                    f"MLFLOW_TRACKING_URI is set but server is unreachable: {tracking_uri}. "
-                    f"Start the server or check the URI. Error: {e}"
-                )
+            f"MLFLOW_TRACKING_URI is set but server is unreachable: {tracking_uri}. "
+            f"Start the server or check the URI. Error: {e}"
+        ) from e
 
     # Server is reachable → enable tracing
     mlflow.set_tracking_uri(tracking_uri)

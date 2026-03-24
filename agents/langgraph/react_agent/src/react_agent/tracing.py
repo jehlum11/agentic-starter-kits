@@ -16,7 +16,7 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 60, retry_interval: int = 1) -> None:
+def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 5, retry_interval: int = 1) -> None:
     """
     Check MLflow health by trying the /health endpoint. If it fails, retry for a certain duration before giving up.
     args:
@@ -74,14 +74,15 @@ def enable_tracing() -> None:
 
     # Check if server is reachable
     try:
-        check_mlflow_health(mlflow_tracking_uri=tracking_uri)
+        health_check_timeout = int(getenv("MLFLOW_HEALTH_CHECK_TIMEOUT", "5"))
+        check_mlflow_health(mlflow_tracking_uri=tracking_uri, max_wait_time=health_check_timeout)
         logger.info(f"[Tracing] MLflow server is reachable at {tracking_uri}")
     except RuntimeError as e:
         logger.warning(f"[Tracing] MLflow server is unreachable at {tracking_uri}")
         raise RuntimeError(
-                    f"MLFLOW_TRACKING_URI is set but server is unreachable: {tracking_uri}. "
-                    f"Start the server or check the URI. Error: {e}"
-                )
+            f"MLFLOW_TRACKING_URI is set but server is unreachable: {tracking_uri}. "
+            f"Start the server or check the URI. Error: {e}"
+        ) from e
 
     # Server is reachable → enable tracing
     mlflow.set_tracking_uri(tracking_uri)
