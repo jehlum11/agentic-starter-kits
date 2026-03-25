@@ -18,6 +18,13 @@ source .env
 export CONTAINER_IMAGE BASE_URL MODEL_ID POSTGRES_HOST POSTGRES_PORT POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD
 
 ## ============================================
+# COPY SHARED IMAGES FOR DOCKER BUILD CONTEXT
+## ============================================
+
+cp -r ../../../images ./images && echo "Images copied into build context"
+trap 'rm -rf ./images' EXIT
+
+## ============================================
 # DOCKER BUILD
 ## ============================================
 

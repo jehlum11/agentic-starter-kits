@@ -98,6 +98,6 @@ def get_graph_closure(
                 middleware=[fifo_middleware],
             )
         else:
-            return create_agent(chat, tools=[TOOLS], system_prompt=system_prompt)
+            return create_agent(chat, tools=TOOLS, system_prompt=system_prompt)
 
     return get_graph

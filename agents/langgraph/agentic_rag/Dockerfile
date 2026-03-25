@@ -18,8 +18,10 @@ COPY src/ ./src/
 # Install the project and its dependencies using uv
 RUN uv pip install --system --no-cache .
 
-# Copy the application entrypoint
+# Copy the application entrypoint, playground UI, and images
 COPY main.py .
+COPY playground/ ./playground/
+COPY images/ ./images/
 
 # Create data directory for vector store
 RUN mkdir -p /app/data && \

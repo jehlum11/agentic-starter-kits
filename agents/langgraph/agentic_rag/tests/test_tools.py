@@ -5,6 +5,8 @@ from unittest.mock import Mock, patch
 import pytest
 from dotenv import load_dotenv
 
+import src.agentic_rag.tools as tools_module
+
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -173,8 +175,6 @@ def test_retriever_tool_filters_empty_chunks(mock_get_components):
 def test_get_retriever_components_initialization(mock_get_env, mock_client_class):
     """Test that retriever components are properly initialized."""
     # Reset cache
-    import src.agentic_rag.tools as tools_module
-
     tools_module._client_cache = None
     tools_module._vector_store_id_cache = None
 
@@ -207,8 +207,6 @@ def test_get_retriever_components_initialization(mock_get_env, mock_client_class
 def test_get_retriever_components_caching(mock_get_env, mock_client_class):
     """Test that retriever components are cached after first call."""
     # Set up cache with values
-    import src.agentic_rag.tools as tools_module
-
     mock_cached_client = Mock()
     tools_module._client_cache = mock_cached_client
     tools_module._vector_store_id_cache = "cached-vector-store-id"
@@ -226,8 +224,6 @@ def test_get_retriever_components_caching(mock_get_env, mock_client_class):
 def test_get_retriever_components_with_base_url(mock_client_class):
     """Test that base_url parameter is used when provided."""
     # Reset cache
-    import src.agentic_rag.tools as tools_module
-
     tools_module._client_cache = None
     tools_module._vector_store_id_cache = None
 
@@ -255,8 +251,6 @@ def test_get_retriever_components_with_base_url(mock_client_class):
 def test_get_retriever_components_no_vector_store(mock_get_env, mock_client_class):
     """Test error handling when no vector store is found."""
     # Reset cache
-    import src.agentic_rag.tools as tools_module
-
     tools_module._client_cache = None
     tools_module._vector_store_id_cache = None
 

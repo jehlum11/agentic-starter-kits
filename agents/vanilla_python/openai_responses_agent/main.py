@@ -5,10 +5,12 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from os import getenv
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from openai_responses_agent.agent import get_agent_closure, AIAgent
+from openai_responses_agent.tracing import enable_tracing, wrap_func_with_mlflow_trace
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -118,6 +120,8 @@ async def lifespan(app: FastAPI):
     for the /chat/completions endpoint. Uses OpenAI client and Responses API (no agentic framework).
     """
     global get_agent
+
+    enable_tracing()
 
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")
@@ -248,7 +252,9 @@ async def _handle_stream(user_message: str, model_id: str):
                     api_key=adapter._api_key,
                 )
                 for name, func in adapter._tools:
+                    func = wrap_func_with_mlflow_trace(func, span_type="tool")
                     agent.register_tool(name, func)
+                agent.query = wrap_func_with_mlflow_trace(agent.query, span_type="agent")
                 return agent.query(user_message, on_event=on_event)
 
             task = asyncio.get_event_loop().run_in_executor(None, run_agent)
@@ -383,6 +389,35 @@ def _map_event_to_chunk(
 )
 async def health():
     return {"status": "healthy", "agent_initialized": get_agent is not None}
+
+
+# ── Playground UI ────────────────────────────────────────────────────────────
+_BASE_DIR = Path(__file__).resolve().parent
+_PLAYGROUND_HTML = _BASE_DIR / "playground" / "templates" / "index.html"
+# In Docker the images are copied to /app/images; locally they live at the repo root
+_IMAGES_DIR = _BASE_DIR / "images"
+if not _IMAGES_DIR.is_dir():
+    _IMAGES_DIR = _BASE_DIR.parent.parent.parent / "images"
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def playground():
+    """Serve the playground chat UI."""
+    return FileResponse(_PLAYGROUND_HTML)
+
+
+@app.get("/images/{filename:path}", include_in_schema=False)
+async def serve_image(filename: str):
+    """Serve images from the project-level images directory."""
+    base = _IMAGES_DIR.resolve()
+    file_path = (base / filename).resolve()
+    try:
+        file_path.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Image not found")
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(file_path)
 
 
 if __name__ == "__main__":

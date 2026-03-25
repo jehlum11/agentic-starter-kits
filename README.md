@@ -22,6 +22,7 @@ Agents are organized by framework. Pick one and follow its README:
 | **LlamaIndex** | [WebSearch Agent](./agents/llamaindex/websearch_agent/) | Agent built on LlamaIndex that uses a web search tool to query the internet and use the results in its answers. |
 | **CrewAI** | [WebSearch Agent](./agents/crewai/websearch_agent/) | CrewAI-based agent with a web search tool to query the internet and answer user questions. |
 | **Vanilla Python** | [OpenAI Responses Agent](./agents/vanilla_python/openai_responses_agent/) | Minimal agent with no framework: only the OpenAI Python client and an Action/Observation loop with tools. Use with OpenAI or any compatible API. |
+| **AutoGen** | [MCP Agent](./agents/autogen/mcp_agent/) | AutoGen AssistantAgent with MCP tools over SSE (e.g. churn prediction, math tools), FastAPI `/chat/completions`. |
 
 ## Deployment Options
 
@@ -54,8 +55,10 @@ agentic-starter-kits/
 │   │   └── websearch_agent/         # CrewAI web search agent
 │   ├── llamaindex/
 │   │   └── websearch_agent/         # LlamaIndex web search agent
-│   └── vanilla_python/
-│       └── openai_responses_agent/  # OpenAI Responses API (no framework)
+│   ├── vanilla_python/
+│   │   └── openai_responses_agent/  # OpenAI Responses API (no framework)
+│   └── autogen/
+│       └── mcp_agent/               # AutoGen + MCP (SSE)
 └── README.md
 ```
 

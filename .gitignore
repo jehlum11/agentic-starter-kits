@@ -5,6 +5,7 @@
 .idea
 .DS_Store
 **/.DS_Store
+**egg-info*
 __pycache__
 .pytest_cache
 .venv
@@ -13,3 +14,7 @@ config.toml
 milvus_data/
 *.egg-info/
 uv.lock
+agents/langflow/simple_tool_calling_agent/local/.ollama-enabled
+*.db
+CLAUDE.md
+agents/demo/
