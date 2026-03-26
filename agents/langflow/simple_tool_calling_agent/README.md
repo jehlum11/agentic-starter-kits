@@ -8,9 +8,16 @@
 
 ## What this agent does
 
-Outdoor activity planning agent built with Langflow. It recommends the best day and time for outdoor activities by reasoning across weather forecasts, air quality, and National Park Service data.
+A tool-calling agent built with Langflow's visual flow builder. It calls external APIs as tools (weather forecasts, national park data) and reasons over the results to answer user questions. Includes Langfuse v3 tracing out of the box. Runs locally via `podman-compose`.
 
-**Example query:** *"I want to go hiking near Denver this weekend. What day is best?"*
+### Included demo flow
+
+The shipped flow is an outdoor activity assistant — it checks weather conditions and national park alerts to help decide if conditions are good for outdoor activities.
+
+**Example queries:**
+- *"Can I go walking in Boston tomorrow at 3 PM?"*
+- *"I want to go hiking near Denver this weekend. What day is best?"*
+- *"Is it a good day for a picnic in San Francisco?"*
 
 ### Tools
 | Tool | API | Description |
@@ -52,9 +59,9 @@ chmod +x deploy-local.sh cleanup-local.sh
 
 This starts:
 - **Langflow** on http://localhost:7860 — the agent UI
-- **PostgreSQL** — shared database server. Hosts two databases: `langflow` (flows, users, settings) and `langfuse` (traces). The `langflow` database is created automatically by PostgreSQL; the `langfuse` database is created by `local/init-db.sh` on first startup
+- **PostgreSQL** — shared database server. Hosts two databases: `langflow` (flows, users, settings) and `langfuse` (metadata). The `langflow` database is created automatically by PostgreSQL; the `langfuse` database is created by `local/init-db.sh` on first startup
 - **Ollama** on http://localhost:11434 — local LLM (qwen2.5:7b), runs natively on host for GPU acceleration
-- **Langfuse v2** on http://localhost:3000 — tracing (admin@langflow.local / admin123)
+- **Langfuse v3** on http://localhost:3000 — tracing (admin@langflow.local / password auto-generated in `local/.env`), backed by ClickHouse, MinIO, and Redis
 
 ### Import and configure the flow
 
@@ -102,8 +109,9 @@ On the cluster, replace `localhost:7860` with your cluster's Langflow route URL.
 |------|---------------------|----------------------------|
 | Downloaded Ollama models (e.g., qwen2.5:7b) | Kept | Kept (stored on host, not in containers) |
 | Imported Langflow flows | Kept | **Deleted** (re-import needed) |
-| Langfuse traces | Kept | **Deleted** |
+| Langfuse traces (ClickHouse + MinIO) | Kept | **Deleted** |
 | PostgreSQL data | Kept | **Deleted** |
+| Redis cache | Kept | **Deleted** |
 | `.env` and `.ollama-enabled` config | Kept | **Deleted** |
 
 ---
@@ -202,7 +210,7 @@ Then update the **KServe vLLM** component in the Langflow UI to point to your re
 After running the agent, traces are automatically sent to Langfuse.
 
 **Locally:**
-1. Open http://localhost:3000 (login: admin@langflow.local / admin123)
+1. Open http://localhost:3000 (login: admin@langflow.local / password auto-generated in `local/.env`)
 2. Select the **Langflow Agent** project
 3. Click **Traces** in the left sidebar
 4. Click on any trace to see the full agent execution — LLM calls, tool invocations, inputs, and outputs

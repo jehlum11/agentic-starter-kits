@@ -23,6 +23,7 @@ Agents are organized by framework. Pick one and follow its README:
 | **CrewAI** | [WebSearch Agent](./agents/crewai/websearch_agent/) | CrewAI-based agent with a web search tool to query the internet and answer user questions. |
 | **Vanilla Python** | [OpenAI Responses Agent](./agents/vanilla_python/openai_responses_agent/) | Minimal agent with no framework: only the OpenAI Python client and an Action/Observation loop with tools. Use with OpenAI or any compatible API. |
 | **AutoGen** | [MCP Agent](./agents/autogen/mcp_agent/) | AutoGen AssistantAgent with MCP tools over SSE (e.g. churn prediction, math tools), FastAPI `/chat/completions`. |
+| **Langflow** | [Simple Tool Calling Agent](./agents/langflow/simple_tool_calling_agent/) | Tool-calling agent built with Langflow's visual flow builder. Calls external APIs as tools and reasons over results. Includes Langfuse v3 tracing. Runs locally via `podman-compose`. |
 
 ## Deployment Options
 
@@ -57,8 +58,10 @@ agentic-starter-kits/
 │   │   └── websearch_agent/         # LlamaIndex web search agent
 │   ├── vanilla_python/
 │   │   └── openai_responses_agent/  # OpenAI Responses API (no framework)
-│   └── autogen/
-│       └── mcp_agent/               # AutoGen + MCP (SSE)
+│   ├── autogen/
+│   │   └── mcp_agent/               # AutoGen + MCP (SSE)
+│   └── langflow/
+│       └── simple_tool_calling_agent/ # Langflow tool-calling agent
 └── README.md
 ```
 
