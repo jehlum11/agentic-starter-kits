@@ -210,7 +210,7 @@ Send a test request:
 Non-streaming
 
 ```bash
-curl -X POST https://google-adk-agent-tguzik-agents.apps.rosa.ai-eng-gpu.socc.p3.openshiftapps.com/chat/completions \
+curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "Best server service?"}], "stream": false}'
 ```
@@ -224,6 +224,52 @@ curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
     "messages": [{"role": "user", "content": "Search for RedHat OpenShift"}],
     "stream": true
   }'
+```
+
+---
+
+## Playground UI
+
+A browser-based chat interface served directly by the agent at the root URL — no separate process needed.
+
+### Running the Playground
+
+Start the agent and the playground in two terminals:
+
+Agent:
+
+```bash
+cd agents/google/adk
+source .venv/bin/activate
+source ./init.sh
+lsof -ti:8000 | xargs kill -9 2>/dev/null
+uvicorn main:app --port 8000
+```
+
+UI App:
+
+```bash
+cd agents/google/adk
+source .venv/bin/activate
+source ./init.sh
+lsof -ti:5001 | xargs kill -9 2>/dev/null
+flask --app playground/app run --port 5001
+```
+
+Open [http://localhost:5001](http://localhost:5001) in your browser.
+
+A green dot in the header means the agent is connected and ready. Type a message and press **Enter** to send.
+
+When deployed to OpenShift, the playground is available at the route URL.
+
+| Variable    | Default                 | Description                  |
+|-------------|-------------------------|------------------------------|
+| `AGENT_URL` | `http://localhost:8000` | URL of the running agent API |
+
+If the agent runs on a different host or port:
+
+```bash
+AGENT_URL=https://your-agent-url flask --app playground/app run --port 5001
 ```
 
 ---
