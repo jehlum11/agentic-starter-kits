@@ -113,42 +113,65 @@ class InteractiveChat:
                     resp = self.ai_service_invoke(payload)
 
                     if self.stream:
+                        thread_id = None
+                        pending = False
                         for r in resp:
                             if isinstance(r, str):
                                 r = json.loads(r)
 
+                            if not thread_id:
+                                thread_id = r.get("thread_id")
+
                             for c in r.get("choices", []):
                                 self._print_message(c)
 
-                                # Check for HITL pending approval
                                 if c.get("finish_reason") == "pending_approval":
-                                    print("\n")
-                                    approval = input(
-                                        ">>> Approve this tool call? (yes/no): "
-                                    ).strip().lower()
-                                    # TODO: Resume agent with approval
-                                    print(
-                                        f"You chose: {approval}. "
-                                        "(Resume flow not yet implemented in streaming example.)"
-                                    )
+                                    pending = True
+
+                        if pending and thread_id:
+                            print("\n")
+                            approval = input(
+                                ">>> Approve this tool call? (yes/no): "
+                            ).strip().lower()
+                            resume_payload = {
+                                "messages": [],
+                                "thread_id": thread_id,
+                                "approval": approval,
+                            }
+                            self._last_role = None
+                            resume_resp = self.ai_service_invoke(resume_payload)
+                            for r in resume_resp:
+                                if isinstance(r, str):
+                                    r = json.loads(r)
+                                for c in r.get("choices", []):
+                                    self._print_message(c)
                         print()  # Final newline
                     else:
                         # Standard invoke handling
-                        choices = resp.get("body", {}).get("choices", [])
+                        resp_body = resp.get("body", {})
+                        thread_id = resp_body.get("thread_id")
+                        choices = resp_body.get("choices", [])
+                        pending = False
                         for c in choices:
                             self._print_message(c)
-
-                            # Check for HITL pending approval
                             if c.get("finish_reason") == "pending_approval":
-                                print("\n")
-                                approval = input(
-                                    ">>> Approve this tool call? (yes/no): "
-                                ).strip().lower()
-                                # TODO: Resume agent with approval
-                                print(
-                                    f"You chose: {approval}. "
-                                    "(Resume flow not yet implemented in local example.)"
-                                )
+                                pending = True
+
+                        if pending and thread_id:
+                            print("\n")
+                            approval = input(
+                                ">>> Approve this tool call? (yes/no): "
+                            ).strip().lower()
+                            resume_payload = {
+                                "messages": [],
+                                "thread_id": thread_id,
+                                "approval": approval,
+                            }
+                            self._last_role = None
+                            resume_resp = self.ai_service_invoke(resume_payload)
+                            resume_choices = resume_resp.get("body", {}).get("choices", [])
+                            for c in resume_choices:
+                                self._print_message(c)
 
             except (EOFError, StopIteration):
                 break

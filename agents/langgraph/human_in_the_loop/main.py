@@ -12,9 +12,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
-
 from human_in_the_loop.agent import get_graph_closure
+
+logger = logging.getLogger(__name__)
 
 
 # OpenAI-compatible request/response models
@@ -335,6 +335,13 @@ async def _handle_stream(
 
     Uses astream with stream_mode="updates" to detect __interrupt__ keys
     in the stream, which is the recommended approach per LangGraph docs.
+
+    NOTE: stream_mode="updates" yields complete node outputs (full messages)
+    rather than token-by-token chunks. For true token-level streaming, use
+    stream_mode=["messages", "updates"] — "messages" provides individual
+    tokens while "updates" still allows detecting __interrupt__ events for
+    the HITL approval flow. This would require refactoring the chunk
+    processing loop below to handle both stream modes.
     """
     global agent_graph_closure, checkpointer
 
@@ -351,7 +358,10 @@ async def _handle_stream(
                 else:
                     resume_value = {
                         "decisions": [
-                            {"type": "reject", "message": "User rejected the tool call."}
+                            {
+                                "type": "reject",
+                                "message": "User rejected the tool call.",
+                            }
                         ]
                     }
                 input_data = Command(resume=resume_value)

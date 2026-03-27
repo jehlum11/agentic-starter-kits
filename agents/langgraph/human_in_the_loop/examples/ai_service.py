@@ -1,4 +1,5 @@
 from typing import Generator
+
 from langchain_core.messages import (
     AIMessage,
     SystemMessage,
@@ -6,8 +7,10 @@ from langchain_core.messages import (
     BaseMessage,
     ToolMessage,
 )
-from human_in_the_loop.agent import get_graph_closure
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command
+
+from human_in_the_loop.agent import get_graph_closure
 
 
 def ai_stream_service(context, base_url=None, model_id=None):
@@ -60,29 +63,29 @@ def ai_stream_service(context, base_url=None, model_id=None):
         payload = context.get_json()
         messages = [convert_dict_to_message(m) for m in payload.get("messages", [])]
         thread_id = payload.get("thread_id", "default")
+        approval = payload.get("approval")
         config = {"configurable": {"thread_id": thread_id}}
 
         try:
-            result = agent.invoke({"messages": messages}, config=config)
-            final_msg = result["messages"][-1]
+            if approval:
+                if approval.lower() in ("yes", "y", "approve"):
+                    resume_value = {"decisions": [{"type": "approve"}]}
+                else:
+                    resume_value = {
+                        "decisions": [
+                            {"type": "reject", "message": "User rejected the tool call."}
+                        ]
+                    }
+                result = agent.invoke(
+                    Command(resume=resume_value), config=config, version="v2"
+                )
+            else:
+                result = agent.invoke(
+                    {"messages": messages}, config=config, version="v2"
+                )
 
-            return {
-                "headers": {"Content-Type": "application/json"},
-                "body": {
-                    "choices": [
-                        {
-                            "index": 0,
-                            "message": {"role": "assistant", "content": final_msg.content},
-                        }
-                    ],
-                    "thread_id": thread_id,
-                },
-            }
-        except Exception as e:
-            from langgraph.errors import GraphInterrupt
-
-            if isinstance(e, GraphInterrupt):
-                interrupt_value = e.interrupts[0].value if e.interrupts else {}
+            if result.interrupts:
+                interrupt_value = result.interrupts[0].value
                 return {
                     "headers": {"Content-Type": "application/json"},
                     "body": {
@@ -99,6 +102,26 @@ def ai_stream_service(context, base_url=None, model_id=None):
                         "thread_id": thread_id,
                     },
                 }
+
+            all_messages = result.value.get("messages", [])
+            final_msg = all_messages[-1] if all_messages else None
+
+            return {
+                "headers": {"Content-Type": "application/json"},
+                "body": {
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": final_msg.content if final_msg else "",
+                            },
+                        }
+                    ],
+                    "thread_id": thread_id,
+                },
+            }
+        except Exception:
             raise
 
     def generate_stream(context) -> Generator[dict, None, None]:
@@ -106,19 +129,51 @@ def ai_stream_service(context, base_url=None, model_id=None):
         payload = context.get_json()
         messages = [convert_dict_to_message(m) for m in payload.get("messages", [])]
         thread_id = payload.get("thread_id", "default")
+        approval = payload.get("approval")
         config = {"configurable": {"thread_id": thread_id}}
 
         try:
+            if approval:
+                if approval.lower() in ("yes", "y", "approve"):
+                    resume_value = {"decisions": [{"type": "approve"}]}
+                else:
+                    resume_value = {
+                        "decisions": [
+                            {"type": "reject", "message": "User rejected the tool call."}
+                        ]
+                    }
+                input_data = Command(resume=resume_value)
+            else:
+                input_data = {"messages": messages}
+
             response_stream = agent.stream(
-                {"messages": messages}, config=config, stream_mode="updates"
+                input_data, config=config, stream_mode="updates"
             )
 
             for update in response_stream:
-                node_name = list(update.keys())[0]
-                data = update[node_name]
+                if "__interrupt__" in update:
+                    interrupt_info = update["__interrupt__"]
+                    interrupt_value = interrupt_info[0].value if interrupt_info else {}
+                    yield {
+                        "choices": [
+                            {
+                                "index": 0,
+                                "delta": {
+                                    "role": "assistant",
+                                    "content": str(interrupt_value),
+                                },
+                                "finish_reason": "pending_approval",
+                            }
+                        ],
+                        "thread_id": thread_id,
+                    }
+                    continue
 
-                if "messages" in data:
-                    msgs = data["messages"]
+                for node_name, node_data in update.items():
+                    if not isinstance(node_data, dict) or "messages" not in node_data:
+                        continue
+
+                    msgs = node_data["messages"]
                     if not isinstance(msgs, list):
                         msgs = [msgs]
 
@@ -131,24 +186,7 @@ def ai_stream_service(context, base_url=None, model_id=None):
                                 ]
                             }
 
-        except Exception as e:
-            from langgraph.errors import GraphInterrupt
-
-            if isinstance(e, GraphInterrupt):
-                interrupt_value = e.interrupts[0].value if e.interrupts else {}
-                yield {
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {
-                                "role": "assistant",
-                                "content": str(interrupt_value),
-                            },
-                            "finish_reason": "pending_approval",
-                        }
-                    ]
-                }
-            else:
-                raise
+        except Exception:
+            raise
 
     return generate, generate_stream

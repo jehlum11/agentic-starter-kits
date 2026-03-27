@@ -13,9 +13,8 @@ Usage:
     uv run examples/execute_ai_service_locally.py
 """
 
-import json
-import sys
 import os
+import sys
 import textwrap
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -127,7 +126,11 @@ def main():
                 )
 
         # Print the final response
-        messages = result.value.get("messages", []) if hasattr(result, "value") else result.get("messages", [])
+        messages = (
+            result.value.get("messages", [])
+            if hasattr(result, "value")
+            else result.get("messages", [])
+        )
         for msg in messages:
             if isinstance(msg, ToolMessage):
                 print(f"\n{'  Tool Result  ':=^60}")
