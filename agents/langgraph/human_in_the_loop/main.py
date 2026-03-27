@@ -319,9 +319,10 @@ async def _handle_chat(
             "usage": None,
         }
 
-    except Exception as e:
+    except Exception:
+        logger.exception("Error processing chat completion request")
         raise HTTPException(
-            status_code=500, detail=f"Error processing request: {str(e)}"
+            status_code=500, detail="Internal server error"
         )
 
 
