@@ -50,7 +50,7 @@ uv tool install llama-stack \
   --with pypdf \
   --with "setuptools<82"
 
-# Create milvus data directory (required by run_llama_server.yaml)**
+# Create milvus data directory (required by run_llama_server.yaml)
 mkdir -p ../../../milvus_data
 
 # Start the server

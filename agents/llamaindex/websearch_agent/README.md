@@ -186,6 +186,8 @@ CONTAINER_IMAGE=quay.io/your-username/llamaindex-websearch-agent:latest
     - Docker Hub: `docker.io/your-username/llamaindex-websearch-agent:latest`
     - GHCR: `ghcr.io/your-org/llamaindex-websearch-agent:latest`
 
+  > **Note:** OpenShift must be able to pull the container image. Make the image **public**, or configure an [image pull secret](https://docs.openshift.com/container-platform/latest/openshift_images/managing_images/using-image-pull-secrets.html) for private registries.
+
 ### Building the Container Image
 
 #### Option A: Build locally and push to a registry
