@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from websearch_agent.agent import get_workflow_closure
+from websearch_agent.tracing import enable_tracing
 from websearch_agent.workflow import ToolCallEvent, InputEvent
 from pydantic import BaseModel, Field
 
@@ -115,6 +116,8 @@ get_agent = None
 async def lifespan(app: FastAPI):
     """Initialize the LlamaIndex workflow closure on startup and clear it on shutdown."""
     global get_agent
+
+    enable_tracing()
 
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")

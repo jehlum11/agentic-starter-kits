@@ -14,6 +14,7 @@ from react_agent.agent import get_graph_closure
 
 logger = logging.getLogger(__name__)
 
+from react_agent.tracing import enable_tracing
 
 # OpenAI-compatible request/response models
 class ChatMessage(BaseModel):
@@ -115,6 +116,8 @@ agent_graph = None
 async def lifespan(app: FastAPI):
     """Initialize the ReAct agent graph on startup and clear it on shutdown."""
     global agent_graph
+
+    enable_tracing()
 
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")

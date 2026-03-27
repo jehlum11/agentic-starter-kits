@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from crewai_web_search.crew import AssistanceAgents
+from crewai_web_search.tracing import enable_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,7 @@ def _make_completion_id() -> str:
 async def lifespan(app: FastAPI):
     """Initialize the CrewAI LLM on startup."""
     global llm
+    enable_tracing()
 
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")

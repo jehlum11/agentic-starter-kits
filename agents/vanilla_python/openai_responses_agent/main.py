@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from openai_responses_agent.agent import get_agent_closure, AIAgent
+from openai_responses_agent.tracing import enable_tracing, wrap_func_with_mlflow_trace
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -119,6 +120,8 @@ async def lifespan(app: FastAPI):
     for the /chat/completions endpoint. Uses OpenAI client and Responses API (no agentic framework).
     """
     global get_agent
+
+    enable_tracing()
 
     base_url = getenv("BASE_URL")
     model_id = getenv("MODEL_ID")
@@ -249,7 +252,9 @@ async def _handle_stream(user_message: str, model_id: str):
                     api_key=adapter._api_key,
                 )
                 for name, func in adapter._tools:
+                    func = wrap_func_with_mlflow_trace(func, span_type="tool")
                     agent.register_tool(name, func)
+                agent.query = wrap_func_with_mlflow_trace(agent.query, span_type="agent")
                 return agent.query(user_message, on_event=on_event)
 
             task = asyncio.get_event_loop().run_in_executor(None, run_agent)

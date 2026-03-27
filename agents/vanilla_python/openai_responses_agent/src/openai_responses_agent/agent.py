@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from openai_responses_agent.tools import search_price, search_reviews
+from openai_responses_agent.tracing import wrap_func_with_mlflow_trace
 
 
 def get_agent_closure(
@@ -82,8 +83,10 @@ class _AIAgentAdapter:
         )
 
         for name, func in self._tools:
+            func = wrap_func_with_mlflow_trace(func, span_type="tool")
             agent.register_tool(name, func)
 
+        agent.query = wrap_func_with_mlflow_trace(agent.query, span_type="agent")
         answer = await asyncio.to_thread(agent.query, question)
         if answer is None:
             answer = ""
@@ -104,10 +107,14 @@ def _messages_to_responses_input(messages: List[Dict]) -> tuple[str, List[Dict]]
     for m in messages:
         role = m.get("role", "user")
         content = m.get("content", "") or ""
-        text_content = [{"type": "input_text", "text": content}]
         if role == "system":
             instructions = content
             continue
+        if role == "assistant":
+            content_type = "output_text"
+        else:
+            content_type = "input_text"
+        text_content = [{"type": content_type, "text": content}]
         input_items.append({"role": role, "content": text_content})
     return instructions, input_items
 
@@ -189,7 +196,7 @@ class AIAgent:
     def _parse_arguments(self, args_str: str) -> List[str]:
         """Parse comma-separated arguments handling quoted strings."""
         reader = csv.reader(StringIO(args_str))
-        args = next(reader)
+        args = next(reader, [])
         return [arg.strip().strip("'\"") for arg in args]
 
     def _responses_create(

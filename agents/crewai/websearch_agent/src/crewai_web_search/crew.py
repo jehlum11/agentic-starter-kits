@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task, after_kickoff
 
 from crewai_web_search.tools import WebSearchTool
+from crewai_web_search.tracing import wrap_func_with_mlflow_trace
 
 
 @CrewBase
@@ -24,9 +25,16 @@ class AssistanceAgents:
 
     @agent
     def ai_assistant(self) -> Agent:
+        tools = [WebSearchTool()]
+        # Manual tool tracing: mlflow.crewai.autolog() does not capture tool spans
+        # in newer CrewAI versions (>=1.10). If a future version fixes this, remove
+        # the manual wrapping below to avoid duplicate tool spans.
+        for tool in tools:
+            tool._run = wrap_func_with_mlflow_trace(tool._run, span_type="tool", name=tool.name)
+
         return Agent(
             config=self.agents_config["ai_assistant"],
-            tools=[WebSearchTool()],
+            tools=tools,
             verbose=True,
             llm=self.llm,
             max_iter=3,
