@@ -146,6 +146,11 @@
             margin-bottom: 12px;
             white-space: pre-wrap;
             word-wrap: break-word;
+            background: #fff9e6;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+            line-height: 1.6;
         }
         .approval-banner .approval-buttons {
             display: flex;
@@ -263,7 +268,8 @@
     const statusDot = document.getElementById('statusDot');
 
     const conversationHistory = [];
-    let currentThreadId = null;
+    // Generate a thread_id upfront so all messages share the same conversation thread
+    let currentThreadId = 'playground-' + crypto.randomUUID().slice(0, 12);
 
     // Check agent health on load
     async function checkHealth() {
@@ -319,6 +325,27 @@
         return text;
     }
 
+    function formatApprovalDetail(raw) {
+        try {
+            const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const actions = data.action_requests || [];
+            if (!actions.length) return raw;
+
+            return actions.map(action => {
+                const args = action.args || {};
+                const lines = [`Tool:  ${action.name}`];
+                for (const [key, value] of Object.entries(args)) {
+                    let display = String(value);
+                    if (display.length > 200) display = display.slice(0, 200) + '…';
+                    lines.push(`${key}:  ${display}`);
+                }
+                return lines.join('\n');
+            }).join('\n\n');
+        } catch {
+            return raw;
+        }
+    }
+
     function showApprovalBanner(detail) {
         const banner = document.createElement('div');
         banner.className = 'approval-banner';
@@ -331,7 +358,7 @@
 
         const detailDiv = document.createElement('div');
         detailDiv.className = 'approval-detail';
-        detailDiv.textContent = detail;
+        detailDiv.textContent = formatApprovalDetail(detail);
         banner.appendChild(detailDiv);
 
         const buttons = document.createElement('div');
@@ -504,10 +531,8 @@
             const requestBody = {
                 messages: conversationHistory,
                 stream: true,
+                thread_id: currentThreadId,
             };
-            if (currentThreadId) {
-                requestBody.thread_id = currentThreadId;
-            }
 
             const response = await fetch('/api/chat', {
                 method: 'POST',

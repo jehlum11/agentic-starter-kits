@@ -99,7 +99,10 @@ class ChatCompletionResponse(BaseModel):
     )
     model: str = Field(..., description="The model used for the chat completion.")
     choices: list[Choice] = Field(..., description="A list of chat completion choices.")
-
+    thread_id: str | None = Field(
+        None,
+        description="Thread ID for conversation persistence. Use this to continue the conversation or send approval.",
+    )
     usage: dict | None = Field(
         None, description="Usage statistics for the completion request."
     )
@@ -371,6 +374,7 @@ async def _handle_stream(
                 input_data = {"messages": langchain_messages}
 
             interrupted = False
+            first_chunk = True
 
             async for chunk in agent.astream(
                 input_data,
@@ -442,6 +446,9 @@ async def _handle_stream(
                                         }
                                     ],
                                 }
+                                if first_chunk:
+                                    data["thread_id"] = thread_id
+                                    first_chunk = False
                                 yield f"data: {json.dumps(data)}\n\n"
 
                             if msg.content:
@@ -458,6 +465,9 @@ async def _handle_stream(
                                         }
                                     ],
                                 }
+                                if first_chunk:
+                                    data["thread_id"] = thread_id
+                                    first_chunk = False
                                 yield f"data: {json.dumps(data)}\n\n"
 
                         elif isinstance(msg, ToolMessage):
@@ -478,6 +488,9 @@ async def _handle_stream(
                                     }
                                 ],
                             }
+                            if first_chunk:
+                                data["thread_id"] = thread_id
+                                first_chunk = False
                             yield f"data: {json.dumps(data)}\n\n"
 
             # Send final chunk

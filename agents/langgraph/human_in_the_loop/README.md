@@ -397,6 +397,7 @@ Agent:
 cd agents/langgraph/human_in_the_loop
 source .venv/bin/activate
 source ./init.sh
+lsof -ti:8000 | xargs kill -9 2>/dev/null
 uvicorn main:app --port 8000
 ```
 
@@ -406,6 +407,7 @@ UI App:
 cd agents/langgraph/human_in_the_loop
 source .venv/bin/activate
 source ./init.sh
+lsof -ti:5001 | xargs kill -9 2>/dev/null
 flask --app playground/app run --port 5001
 ```
 
