@@ -17,7 +17,10 @@ COPY pyproject.toml .
 COPY src/ ./src/
 
 # Install the project and its dependencies using uv
-RUN uv pip install --no-cache ".[tracing]"
+# pysqlite3-binary (from pyproject.toml) provides SQLite >= 3.35 for ChromaDB on UBI9
+RUN uv pip install --no-cache ".[tracing]" pysqlite3-binary \
+    && SITE=$(python3 -c "import site; print(site.getsitepackages()[0])") \
+    && printf '__import__("pysqlite3")\nimport sys\nsys.modules["sqlite3"] = sys.modules.pop("pysqlite3")\n' > "$SITE/sitecustomize.py"
 
 # Copy the application entrypoint, playground UI, and images
 COPY main.py .

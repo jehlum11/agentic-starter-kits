@@ -270,7 +270,7 @@ Pretty Printed Stream:
 curl -sN -X POST http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": true}' |
-   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
+   jq -R -r -j 'scan("^data:(.*)") | .[0] | select(. != " [DONE]") | fromjson.choices[0].delta.content // empty'
 ```
 
 ### GET /health

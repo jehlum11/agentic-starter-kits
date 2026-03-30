@@ -1,6 +1,5 @@
 from os import getenv
 import time
-import requests
 from dotenv import load_dotenv
 from typing import Callable, Literal, Optional
 
@@ -24,6 +23,7 @@ def check_mlflow_health(mlflow_tracking_uri: str, max_wait_time: int = 5, retry_
         max_wait_time: total time to keep retrying before giving up (in seconds)
         retry_interval: time to wait between retries (in seconds)
     """
+    import requests
     mlflow_health_endpoint = "/health"
     mlflow_url = f"{mlflow_tracking_uri.rstrip('/')}{mlflow_health_endpoint}"
     start_time = time.time()

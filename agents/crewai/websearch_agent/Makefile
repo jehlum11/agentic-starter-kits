@@ -71,8 +71,15 @@ deploy: _check-env ## Deploy to OpenShift/K8s via Helm
 	    $${MLFLOW_TRACKING_INSECURE_TLS:+--set env.MLFLOW_TRACKING_INSECURE_TLS="$${MLFLOW_TRACKING_INSECURE_TLS}"} \
 	    $${MLFLOW_WORKSPACE:+--set env.MLFLOW_WORKSPACE="$${MLFLOW_WORKSPACE}"} && \
 	  if command -v oc >/dev/null 2>&1; then \
-	    ROUTE=$$(oc get route $(AGENT_NAME) -o jsonpath='{.spec.host}' 2>/dev/null || true); \
-	    if [ -n "$$ROUTE" ]; then echo "" && echo "Agent is available at: https://$$ROUTE" && echo "Note: It may take about a minute for the application to become available."; fi; \
+	    echo "" && echo "Waiting for rollout to complete..." && \
+	    if oc rollout status deployment/$(AGENT_NAME) --timeout=120s; then \
+	      ROUTE=$$(oc get route $(AGENT_NAME) -o jsonpath='{.spec.host}' 2>/dev/null || true); \
+	      if [ -n "$$ROUTE" ]; then echo "" && echo "Agent is available at: https://$$ROUTE"; fi; \
+	    else \
+	      echo "" && echo "WARNING: Rollout did not complete successfully. Check pod status with:" && \
+	      echo "  oc get pods -l app.kubernetes.io/name=$(AGENT_NAME)" && \
+	      echo "  oc logs deployment/$(AGENT_NAME)"; \
+	    fi; \
 	  fi
 
 dry-run: _check-env ## Render Helm templates without deploying
