@@ -167,9 +167,9 @@ make init        # creates .env from .env.example
 Edit `.env` with your model endpoint and container image:
 
 ```ini
-API_KEY=your-api-key-here
-BASE_URL=https://your-model-endpoint.com/v1
-MODEL_ID=llama-3.1-8b-instruct
+API_KEY=your-openai-api-key
+BASE_URL=https://api.openai.com/v1
+MODEL_ID=gpt-4o-mini
 CONTAINER_IMAGE=quay.io/your-username/openai-responses-agent:latest
 ```
 
