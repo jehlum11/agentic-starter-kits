@@ -1,6 +1,6 @@
 <div style="text-align: center;">
 
-![LangGraph Logo](/images/openai_logo.svg)
+![OpenAI Logo](/images/openai_logo.svg)
 
 # Pure Responses Agent
 
@@ -10,67 +10,174 @@
 
 ## What this agent does
 
-Minimal agent with no framework: only the OpenAI Python client and an Action/Observation loop with tools. Use with
-OpenAI or any compatible API.
+Minimal agent with no framework: only the OpenAI Python client and an Action/Observation loop with tools. Requires the
+[OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses/create) — works with OpenAI or any
+endpoint that supports the Responses API.
 
 ---
 
-### Preconditions
+## Prerequisites
 
-- Copy/paste the `.env` file and set values for your environment
-- Choose **local** or **RH OpenShift Cluster** and fill the needed values
-- Run `./init.sh` to load values from `.env` into the environment
+- [uv](https://docs.astral.sh/uv/) — Python package manager
+- [Podman](https://podman.io/) or [Docker](https://www.docker.com/) — for local container builds (Option A)
+- [oc](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) — for OpenShift deployment
+- [Helm](https://helm.sh/) — for deploying to Kubernetes/OpenShift
+- [GNU Make](https://www.gnu.org/software/make/) and a bash-compatible shell — on Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (recommended) or [Git Bash](https://git-scm.com/downloads)
 
-Go to agent dir:
+## Deploying Locally
+
+### Setup
 
 ```bash
 cd agents/vanilla_python/openai_responses_agent
+make init        # creates .env from .env.example
 ```
 
-Change the name of .env file
+### Configuration
 
-```bash
-mv template.env .env
-```
+> **Note:** This agent uses the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses/create),
+> which is specific to OpenAI.
 
-#### Local but with a use of OpenAI API
-
-Edit the `.env` file with your local configuration:
-
-**OpenAI API** directly:
+#### Using the OpenAI API
 
 ```ini
+API_KEY=sk-...
 BASE_URL=https://api.openai.com/v1
 MODEL_ID=gpt-4o-mini
-API_KEY=sk-...
-CONTAINER_IMAGE=not-needed
 ```
 
-##### Tracing
+#### Using another Responses API-compatible endpoint
+
+```ini
+API_KEY=your-api-key-here
+BASE_URL=https://your-responses-api-endpoint.com/v1
+MODEL_ID=your-model-id
+```
+
+**Notes:**
+
+- `API_KEY` - your OpenAI API key
+- `BASE_URL` - should end with `/v1`
+- `MODEL_ID` - model identifier available on your endpoint
+
+### Tracing (optional)
+
+#### Tracing with a local MLflow server
+
+To enable MLflow tracing, add the following to your `.env`:
 
 ```ini
 MLFLOW_TRACKING_URI="http://localhost:5000"
-MLFLOW_EXPERIMENT_NAME="OpenAI Responses Local Experiment"
+MLFLOW_EXPERIMENT_NAME="openai-responses-agent"
 MLFLOW_HTTP_REQUEST_TIMEOUT=2
 MLFLOW_HTTP_REQUEST_MAX_RETRIES=0
 ```
 
-#### OpenShift Cluster
+Then install the tracing dependency and start the MLflow server:
 
-Edit the `.env` file and fill in all required values:
+```bash
+# Create and activate a virtual environment (if not already created)
+uv venv
+
+# Install mlflow as an optional dependency
+uv pip install -e ".[tracing]"
+
+# Start the MLflow server in a separate terminal
+uv run mlflow server --port 5000
+```
+
+#### Tracing with an OpenShift MLflow server
+
+To enable tracing and logging with MLflow on your OpenShift cluster, add the following environment variables to your `.env` file:
 
 ```ini
-API_KEY=your-api-key-here
-BASE_URL=https://your-llama-stack-distribution.com/v1
-MODEL_ID=llama-3.1-8b-instruct
+MLFLOW_TRACKING_URI="https://<openshift-dashboard-url>/mlflow"
+MLFLOW_TRACKING_TOKEN="<your-openshift-token>"
+MLFLOW_EXPERIMENT_NAME="openai-responses-agent"
+MLFLOW_TRACKING_INSECURE_TLS="true"
+MLFLOW_WORKSPACE="default"
+```
+
+**Notes:**
+- `MLFLOW_TRACKING_URI` - Replace `<openshift-dashboard-url>` with your OpenShift cluster's data science gateway URL
+- `MLFLOW_TRACKING_TOKEN` - Your openshift authentication token. It can be obtained from the openshift console.
+- `MLFLOW_EXPERIMENT_NAME` - A descriptive name for your experiment (e.g., "OpenAI Responses Demo")
+- `MLFLOW_TRACKING_INSECURE_TLS` - Set to `"true"` if your OpenShift cluster does not use trusted certificates
+- `MLFLOW_WORKSPACE` - Project name
+
+- Tracing is optional; if you do not set `MLFLOW_TRACKING_URI`, the application will run without MLflow logging.
+
+- If `MLFLOW_TRACKING_URI` is set, the application will attempt to connect to the MLflow server at startup. If the server is unreachable, the application will log a warning and continue running without tracing.
+
+- You can control how long the application waits for the MLflow server by setting `MLFLOW_HEALTH_CHECK_TIMEOUT` (in seconds, default: `5`).
+
+### Running the Agent
+
+#### Web Playground (`make run`)
+
+```bash
+make run
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser. A green dot in the header means the agent is connected and ready.
+
+#### Interactive CLI (`make run-cli`)
+
+For terminal-based testing without a browser:
+
+```bash
+make run-cli
+```
+
+This launches an interactive prompt where you can pick predefined questions or type your own. Tool calls and results are displayed inline with colored output.
+
+#### Standalone Flask Playground (alternative)
+
+You can also run the playground as a separate Flask app that proxies to the agent:
+
+```bash
+# Terminal 1: Start the agent
+make run
+
+# Terminal 2: Open in the same directory as Terminal 1
+uv run flask --app playground.app run --port 5050
+```
+
+| Variable    | Default                  | Description                     |
+|-------------|--------------------------|---------------------------------|
+| `AGENT_URL` | `http://localhost:8000`  | URL of the running agent API    |
+
+If the agent runs on a different host or port:
+
+```bash
+AGENT_URL=https://your-agent-url uv run flask --app playground.app run --port 5050
+```
+
+## Deploying to OpenShift
+
+### Setup
+
+```bash
+cd agents/vanilla_python/openai_responses_agent
+make init        # creates .env from .env.example
+```
+
+### Configuration
+
+Edit `.env` with your model endpoint and container image:
+
+```ini
+API_KEY=your-openai-api-key
+BASE_URL=https://api.openai.com/v1
+MODEL_ID=gpt-4o-mini
 CONTAINER_IMAGE=quay.io/your-username/openai-responses-agent:latest
 ```
 
 **Notes:**
 
-- `API_KEY` – contact your cluster administrator
-- `BASE_URL` – should end with `/v1`
-- `MODEL_ID` – contact your cluster administrator
+- `API_KEY` - your API key or contact your cluster administrator
+- `BASE_URL` - should end with `/v1`
+- `MODEL_ID` - model identifier available on your endpoint
 - `CONTAINER_IMAGE` – full image path where the agent container will be pushed and pulled from. The image is built
   locally, pushed to this registry, and then deployed to OpenShift.
 
@@ -82,225 +189,103 @@ CONTAINER_IMAGE=quay.io/your-username/openai-responses-agent:latest
     - Docker Hub: `docker.io/your-username/openai-responses-agent:latest`
     - GHCR: `ghcr.io/your-org/openai-responses-agent:latest`
 
-##### Tracing
+  > **Note:** OpenShift must be able to pull the container image. Make the image **public**, or configure an [image pull secret](https://docs.openshift.com/container-platform/latest/openshift_images/managing_images/using-image-pull-secrets.html) for private registries.
 
-To enable tracing and logging with MLflow on your OpenShift cluster, add the following environment variables to your `.env` file:
+### Building the Container Image
 
-```ini
-MLFLOW_TRACKING_URI="https://<openshift-dashboard-url>/mlflow"
-MLFLOW_TRACKING_TOKEN="<your-openshift-token>"
-MLFLOW_EXPERIMENT_NAME="<your-experiment-name>"
-MLFLOW_TRACKING_INSECURE_TLS="true"
-MLFLOW_WORKSPACE="default"
-```
+#### Option A: Build locally and push to a registry
 
-**Notes:**
-- `MLFLOW_TRACKING_URI` - Replace `<openshift-dashboard-url>` with your OpenShift cluster's data science gateway URL
-- `MLFLOW_TRACKING_TOKEN` - Your openshift authentication token. It can be obtained from the openshift console.
-- `MLFLOW_EXPERIMENT_NAME` - A descriptive name for your experiment (e.g., "OpenAI Responses Cluster Demo")
-- `MLFLOW_TRACKING_INSECURE_TLS` - Set to `"true"` if your OpenShift cluster does not use trusted certificates
-- `MLFLOW_WORKSPACE` - Project name
-
-- Tracing is optional; if you do not set `MLFLOW_TRACKING_URI`, the application will run without MLflow logging.
-
-- If `MLFLOW_TRACKING_URI` is set, the application will attempt to connect to the MLflow server at startup. If the server is unreachable, the application will log a warning and continue running without tracing.
-
-- You can control how long the application waits for the MLflow server by setting `MLFLOW_HEALTH_CHECK_TIMEOUT` (in seconds, default: `5`).
-
-Create and activate a virtual environment (Python 3.12) in this directory using [uv](https://docs.astral.sh/uv/):
+Requires Podman (or Docker) and a registry account (e.g., Quay.io).
 
 ```bash
-uv venv --python 3.12
-source .venv/bin/activate
+make build    # builds the image locally
+make push     # pushes to the registry specified in CONTAINER_IMAGE
 ```
 
-(On Windows: `.venv\Scripts\activate`)
+#### Option B: Build in-cluster via OpenShift BuildConfig
 
-Make scripts executable:
+No Podman, Docker, or registry account needed — just the `oc` CLI.
 
 ```bash
-chmod +x init.sh
+make build-openshift
 ```
 
-Load values from `.env` into environment variables:
+After the build completes, set `CONTAINER_IMAGE` in your `.env` to the internal registry URL printed after the build.
+
+### Deploying
+
+#### Preview manifests (`make dry-run`)
 
 ```bash
-source ./init.sh
+make dry-run          # preview rendered Helm manifests (secrets redacted)
 ```
 
----
-
-## Local usage (Ollama + LlamaStack Server)
-
-Create package with agent and install it in venv:
+#### Deploy (`make deploy`)
 
 ```bash
-uv pip install -e .
-uv pip install ollama
+make deploy
 ```
 
-Install mlflow (>=3.10.0) - *Optional: Only required if tracing is enabled*
-```bash
-uv pip install "mlflow>=3.10.0"
-```
+#### Verify deployment
 
-Install Ollama from the [Ollama site](https://ollama.com/) or via Brew:
+After deploying, the application may take about a minute to become available while the pod starts up.
 
-```bash
-# brew install ollama
-# or
-curl -fsSL https://ollama.com/install.sh | sh
-```
-
-Pull required models:
-
-```bash
-ollama pull llama3.2:3b
-ollama pull embeddinggemma:latest
-```
-
-Start Ollama service:
-
-```bash
-ollama serve
-```
-
-> **Keep this terminal open!**  
-> Ollama needs to keep running.
-
-Start MLflow Server
-```bash
-mlflow server --port 5000
-```
->**Keep this terminal open** - the server needs to keep running.
-
-Start LlamaStack server:
-
-```bash
-llama stack run ../../../run_llama_server.yaml
-```
-
-> **Keep this terminal open** – the server needs to keep running.  
-> You should see output indicating the server started on `http://localhost:8321`.
-
-Run the example:
-
-```bash
-uv run examples/execute_ai_service_locally.py
-```
-
----
-
-## Deployment on Red Hat OpenShift Cluster
-
-Install MLflow for RHOAI 3.2 or 3.3 - *Optional: Only required if tracing is enabled*
-```bash
-uv pip install "git+https://github.com/red-hat-data-services/mlflow@rhoai-3.3"
-```
-
-Make deploy script executable:
-
-```bash
-chmod +x deploy.sh
-```
-
-Build image and deploy agent:
-
-```bash
-./deploy.sh
-```
-
-This will:
-
-- Create Kubernetes secret for API key
-- Build and push the Docker image
-- Deploy the agent to OpenShift
-- Create Service and Route
-
-Get the route URL:
+The route URL is printed after `make deploy`. You can also retrieve it manually:
 
 ```bash
 oc get route openai-responses-agent -o jsonpath='{.spec.host}'
 ```
 
-Send a test request:
-
-Non-streaming
+#### Remove deployment (`make undeploy`)
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
+make undeploy
+```
+
+See [OpenShift Deployment](../../../docs/openshift-deployment.md) for more details.
+
+## API Endpoints
+
+### POST /chat/completions
+
+Non-streaming:
+
+```bash
+curl -X POST http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": false}'
 ```
 
-Streaming
+Streaming:
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
+curl -sN -X POST http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": true}'
 ```
 
-Pretty Printed Stream
+Pretty Printed Stream:
 
 ```bash
-curl -X POST https://<YOUR_ROUTE_URL>/chat/completions \
+curl -sN -X POST http://localhost:8000/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"messages": [{"role": "user", "content": "How much does a Lenovo Laptop cost and what are the reviews?"}], "stream": true}' |
-   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
+   jq -R -r -j 'scan("^data:(.*)") | .[0] | select(. != " [DONE]") | fromjson.choices[0].delta.content // empty'
 ```
 
----
-
-## Playground UI
-
-A browser-based chat interface is served directly by the agent at the root URL — no separate process needed.
-
-### Running the Playground
-
-Start the agent and open the root URL in your browser:
+### GET /health
 
 ```bash
-uvicorn main:app --port 8000
+curl http://localhost:8000/health
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in your browser.
-
-A green dot in the header means the agent is connected and ready. Type a message and press **Enter** to send.
-
-When deployed to OpenShift, the playground is available at the route URL.
-
-### Standalone Flask Playground (alternative)
-
-You can also run the playground as a separate Flask app if needed:
+## Tests
 
 ```bash
-uv pip install flask
+make test
 ```
 
-```bash
-# Terminal 1: Start the agent
-uvicorn main:app --port 8000
+## Resources
 
-# Terminal 2: Start the playground
-flask --app playground/app run --port 5001
-```
-
-| Variable    | Default                  | Description                     |
-|-------------|--------------------------|---------------------------------|
-| `AGENT_URL` | `http://localhost:8000`  | URL of the running agent API    |
-
-If the agent runs on a different host or port:
-
-```bash
-AGENT_URL=https://your-agent-url flask --app playground/app run --port 5001
-```
-
----
-
-## Agent-Specific Documentation
-
-- [OpenAI Python client](https://github.com/openai/openai-python)
+- [OpenAI Python Client](https://github.com/openai/openai-python)
 - [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses/create)
-- [Ollama](https://ollama.com/)
-- [Ollama (Homebrew)](https://formulae.brew.sh/formula/ollama#default)

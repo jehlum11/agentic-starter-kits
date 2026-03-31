@@ -7,10 +7,10 @@ A simple Flask chat interface that proxies requests to the agent's
 Usage:
     # Make sure the agent is running first (default: http://localhost:8000)
     cd agents/crewai/websearch_agent
-    flask --app playground/app run --port 5001
+    uv run flask --app playground.app run --port 5050
 
     # Or with a custom agent URL:
-    AGENT_URL=http://localhost:8000 flask --app playground/app run --port 5001
+    AGENT_URL=http://localhost:8000 uv run flask --app playground.app run --port 5050
 """
 
 import json
@@ -44,6 +44,7 @@ def serve_image(filename):
 
 
 AGENT_URL = getenv("AGENT_URL", "http://localhost:8000")
+CHAT_ENDPOINT = f"{AGENT_URL}/chat/completions"
 
 
 @app.route("/")
@@ -86,7 +87,7 @@ def chat():
     def generate():
         try:
             with http_requests.post(
-                f"{AGENT_URL}/chat/completions",
+                CHAT_ENDPOINT,
                 json=payload,
                 stream=True,
                 timeout=(10, 300),
@@ -143,4 +144,4 @@ def chat():
 
 if __name__ == "__main__":
     debug_mode = getenv("FLASK_DEBUG", "false").lower() == "true"
-    app.run(debug=debug_mode, port=5001)
+    app.run(debug=debug_mode, port=5050)

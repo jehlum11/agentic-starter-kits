@@ -17,6 +17,7 @@ env: {}
 secrets:
   apiKey: ""
   postgresPassword: ""
+  mlflowTrackingToken: ""
 
 service:
   port: 8080

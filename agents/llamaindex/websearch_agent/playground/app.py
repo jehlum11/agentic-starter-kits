@@ -144,4 +144,4 @@ def chat():
 
 if __name__ == "__main__":
     debug_mode = getenv("FLASK_DEBUG", "false").lower() == "true"
-    app.run(debug=debug_mode, port=5001)
+    app.run(debug=debug_mode, port=5050)

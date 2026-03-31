@@ -49,6 +49,13 @@ spec:
                   name: {{ include "agent.fullname" . }}-secret
                   key: postgres-password
             {{- end }}
+            {{- if .Values.secrets.mlflowTrackingToken }}
+            - name: MLFLOW_TRACKING_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agent.fullname" . }}-secret
+                  key: mlflow-tracking-token
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
