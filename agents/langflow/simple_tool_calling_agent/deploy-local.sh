@@ -22,7 +22,7 @@ fi
 
 # Copy .env if it doesn't exist
 if [ ! -f "$LOCAL_DIR/.env" ]; then
-  cp "$LOCAL_DIR/.env.example" "$LOCAL_DIR/.env"
+  cp "$SCRIPT_DIR/.env.example" "$LOCAL_DIR/.env"
   echo "Created .env from .env.example"
 fi
 
@@ -39,57 +39,6 @@ if ! grep -q '^LANGFUSE_ENCRYPTION_KEY=.\+' "$LOCAL_DIR/.env" 2>/dev/null; then
   sed -i.bak "s/^LANGFUSE_ENCRYPTION_KEY=.*/LANGFUSE_ENCRYPTION_KEY=$GENERATED_KEY/" "$LOCAL_DIR/.env"
   rm -f "$LOCAL_DIR/.env.bak"
   echo "Generated Langfuse encryption key."
-fi
-
-# Ask about Ollama on first run
-OLLAMA_FLAG="$LOCAL_DIR/.ollama-enabled"
-if [ ! -f "$OLLAMA_FLAG" ]; then
-  echo ""
-  read -p "Do you want to use Ollama as a local LLM? (Y/n) " -n 1 -r
-  echo ""
-  if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    echo "yes" > "$OLLAMA_FLAG"
-  else
-    echo "no" > "$OLLAMA_FLAG"
-    echo "Ollama disabled. You can point Langflow to an external model endpoint instead."
-  fi
-fi
-
-USE_OLLAMA=$(cat "$OLLAMA_FLAG")
-
-# Start Ollama natively (not in a container) for GPU acceleration
-if [ "$USE_OLLAMA" = "yes" ]; then
-  if ! command -v ollama &>/dev/null; then
-    echo "Ollama is not installed. Installing..."
-    if [[ "$(uname)" == "Darwin" ]]; then
-      brew install ollama
-    else
-      curl -fsSL https://ollama.com/install.sh | sh
-    fi
-  fi
-
-  # Start ollama if not already running
-  if ! curl -s http://localhost:11434/api/tags &>/dev/null; then
-    echo "Starting Ollama..."
-    ollama serve &>/dev/null &
-    sleep 3
-  else
-    echo "Ollama is already running."
-  fi
-
-  # Pull model if needed
-  if [ -f "$LOCAL_DIR/.env" ]; then
-    OLLAMA_MODEL=$(grep -E '^OLLAMA_MODEL=' "$LOCAL_DIR/.env" | cut -d= -f2- || true)
-  fi
-  OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:7b}"
-
-  if ollama list | grep -q "$OLLAMA_MODEL"; then
-    echo "Ollama model '$OLLAMA_MODEL' already available."
-  else
-    echo "Pulling Ollama model: $OLLAMA_MODEL (first time only)..."
-    ollama pull "$OLLAMA_MODEL" || \
-      echo "Warning: Could not pull model. Run manually: ollama pull $OLLAMA_MODEL"
-  fi
 fi
 
 cd "$LOCAL_DIR" || { echo "ERROR: Directory $LOCAL_DIR not found."; exit 1; }
@@ -139,18 +88,15 @@ echo "=== Local environment is ready ==="
 echo ""
 echo "  Langflow UI:  http://localhost:7860"
 echo "  Langfuse:     http://localhost:3000  (login: admin@langflow.local / password auto-generated in local/.env)"
-if [ "$USE_OLLAMA" = "yes" ]; then
-  echo "  Ollama API:   http://localhost:11434  (running natively on host)"
-fi
 echo ""
 echo "  Next steps:"
 echo "    1. Open http://localhost:7860"
 echo "    2. Import the flow: flows/outdoor-activity-agent.json"
-echo "    3. Configure the flow components:"
-echo "       - KServe vLLM: set api_base=http://host.containers.internal:11434/v1 and model_name=qwen2.5:7b"
+echo "    3. Configure the flow components (see README for details):"
+echo "       - KServe vLLM: set api_base and model_name (Ollama, LlamaStack, or remote endpoint)"
 echo "       - NPS Search Parks: set api_key (get one at https://developer.nps.gov)"
 echo "       - NPS Park Alerts: set api_key (same NPS key)"
 echo "    4. Run the agent from the Langflow UI"
 echo ""
-echo "  To stop:              ./cleanup-local.sh"
-echo "  To stop and wipe data: ./cleanup-local.sh --force"
+echo "  To stop:              make stop"
+echo "  To stop and wipe data: make clean"

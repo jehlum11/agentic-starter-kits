@@ -114,17 +114,6 @@ cd agents/langgraph/react_agent
 make test
 ```
 
-## Building Container Images Locally
-
-The Makefiles auto-detect [Podman](https://podman.io/) (preferred) or Docker for container builds:
-
-```bash
-make build    # builds image locally using podman (or docker)
-make push     # pushes image to registry
-```
-
-To install Podman, see [podman.io/docs/installation](https://podman.io/docs/installation). On RHEL/Fedora it is pre-installed.
-
 ## Dependencies
 
 All agents use [uv](https://docs.astral.sh/uv/) for dependency management:

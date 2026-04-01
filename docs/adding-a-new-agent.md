@@ -41,6 +41,20 @@ Every agent must have:
 | `tests/` | Tests directory |
 | `examples/` | Example scripts |
 
+### Flow-based agents (e.g., Langflow)
+
+Some agents do not deploy a custom container. Instead, the "agent" is a flow definition (e.g., JSON) imported into a pre-existing platform instance. These agents should still have:
+
+| File | Purpose |
+|------|---------|
+| `agent.yaml` | Same as above, but add `deploymentModel: flow-import` and adjust env vars to match the infrastructure stack |
+| `Makefile` | Targets: `init`, `run`, `stop`, `clean`, `status`, `logs`, `help` |
+| `.env.example` | Environment variables for the local infrastructure stack |
+| `README.md` | Setup, usage, and deployment instructions |
+| `flows/` | Flow definition files (JSON, YAML, etc.) |
+
+These agents do **not** need: `Dockerfile`, `values.yaml`, `.dockerignore`, `pyproject.toml`, `main.py`, `src/`, `tests/`, `examples/`, `playground/`.
+
 ## 4. API Contract
 
 All agents must expose these endpoints:
