@@ -24,94 +24,96 @@ connector to route inference through a LlamaStack server's OpenAI-compatible API
   use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (recommended)
   or [Git Bash](https://git-scm.com/downloads)
 
-## Deploying Locally
+## Local Development
 
-### Setup
+#### Initiating base
+
+Here you copy .env.template file into .env
 
 ```bash
 cd agents/google/adk
-make init        # creates .env from .env.example
+make init
 ```
 
-### Configuration
+Edit `.env` with your configuration, then:
 
-#### Pointing to a locally hosted model
+#### Creating environment
 
-```ini
-API_KEY = not-needed
-BASE_URL = http://localhost:8321/v1
-MODEL_ID = ollama/llama3.2:3b
-```
-
-See [Local Development](../../../docs/local-development.md) for Ollama + Llama Stack setup for local model serving.
-
-#### Pointing to a remotely hosted model
-
-```ini
-API_KEY = your-api-key-here
-BASE_URL = https://your-model-endpoint.com/v1
-MODEL_ID = llama-3.1-8b-instruct
-```
-
-**Notes:**
-
-- `API_KEY` - your API key or contact your cluster administrator
-- `BASE_URL` - should end with `/v1`
-- `MODEL_ID` - model identifier available on your endpoint
-
-### Running the Agent
-
-#### Web Playground (`make run`)
+Now you will remove old .venv and create new. Next dependencies will be installed.
 
 ```bash
-# Kill any existing process on port 8000 to avoid conflicts
-lsof -ti:8000 | xargs kill -9 2>/dev/null; make run
+make env
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in your browser. A green dot in the header means the agent is
-connected and ready.
+#### Setup Ollama
 
-#### Interactive CLI (`make run-cli`)
+This will install ollama if it is not installed already. Then pull needed models for local work.
+
+```bash
+make ollama
+```
+
+#### Run llama server
+
+> **Keep this terminal open** – the server needs to keep running.
+> You should see output indicating the server started on `http://localhost:8321`.
+
+```bash
+make llama-server
+```
+
+#### Run the interactive web application
+
+> **Keep this terminal open** – the server needs to keep running.
+> You should see output indicating the server started on `http://localhost:8321`.
+
+```bash
+cd agents/google/adk
+make run-app
+```
+
+#### Interactive CLI
 
 For terminal-based testing without a browser:
 
 ```bash
 cd agents/google/adk
-# Kill any existing process on port 8000 to avoid conflicts
-lsof -ti:8000 | xargs kill -9 2>/dev/null; make run-cli
+make run-cli
 ```
 
-This launches an interactive prompt where you can pick predefined questions or type your own. Tool calls and results are
-displayed inline with colored output.
+## API Endpoints
 
-#### Standalone Flask Playground (alternative)
+### POST /chat/completions
 
-You can also run the playground as a separate Flask app that proxies to the agent:
+Non-streaming:
 
 ```bash
-# Terminal 1: Start the agent
-cd agents/google/adk
-# Kill any existing process on port 8000 to avoid conflicts
-lsof -ti:8000 | xargs kill -9 2>/dev/null; make run
+curl -X POST http://localhost:8000/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Best server service?"}], "stream": false}'
 ```
 
+Streaming:
+
 ```bash
-# Terminal 2: Start the Flask playground
-cd agents/google/adk
-# Kill any existing process on port 5001 to avoid conflicts
-lsof -ti:5001 | xargs kill -9 2>/dev/null; uv run flask --app playground/app run --port 5001
+curl -sN -X POST http://localhost:8000/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Search for RedHat OpenShift"}], "stream": true}'
 ```
 
-Open [http://localhost:5001](http://localhost:5001) in your browser.
-
-| Variable    | Default                 | Description                  |
-|-------------|-------------------------|------------------------------|
-| `AGENT_URL` | `http://localhost:8000` | URL of the running agent API |
-
-If the agent runs on a different host or port:
+Pretty Printed Stream:
 
 ```bash
-AGENT_URL=https://your-agent-url uv run flask --app playground/app run --port 5001
+curl -sN -X POST http://localhost:8000/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Search for RedHat OpenShift"}], "stream": true}' |
+   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
+```
+
+### GET /health
+
+```bash
+curl http://localhost:8000/health
 ```
 
 ## Deploying to OpenShift
@@ -155,6 +157,18 @@ CONTAINER_IMAGE = quay.io/your-username/google-adk-agent:latest
   for private registries.
 
 ### Building the Container Image
+
+Login to OC
+
+```bash
+oc login -u "login" -p "password" https://super-link-to-cluster:111
+```
+
+Login ex. Docker
+
+```bash
+docker login -u='login' -p='password' quay.io
+```
 
 #### Option A: Build locally and push to a registry
 
@@ -206,41 +220,6 @@ make undeploy
 ```
 
 See [OpenShift Deployment](../../../docs/openshift-deployment.md) for more details.
-
-## API Endpoints
-
-### POST /chat/completions
-
-Non-streaming:
-
-```bash
-curl -X POST http://localhost:8000/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Best server service?"}], "stream": false}'
-```
-
-Streaming:
-
-```bash
-curl -sN -X POST http://localhost:8000/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Search for RedHat OpenShift"}], "stream": true}'
-```
-
-Pretty Printed Stream:
-
-```bash
-curl -sN -X POST http://localhost:8000/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Search for RedHat OpenShift"}], "stream": true}' |
-   jq -R -r -j --stream 'scan("^data:(.*)")[] | fromjson.choices[0].delta.content // empty'
-```
-
-### GET /health
-
-```bash
-curl http://localhost:8000/health
-```
 
 ## Tests
 

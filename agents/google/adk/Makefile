@@ -4,20 +4,67 @@ CHART_DIR      := ../../../charts/agent
 VALUES_FILE    := values.yaml
 CONTAINER_CLI  := $(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
 
-.PHONY: init run run-cli build push build-openshift deploy undeploy test dry-run help
+.PHONY: init re-init env ollama llama run run-cli build push build-openshift deploy undeploy test dry-run help
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
 
+re-init: ## Activate venv and reload .env variables
+	@source .venv/bin/activate && set -a && source .env && set +a && \
+	  echo "Venv activated and .env variables loaded."
+
 init: ## Copy .env.example to .env for configuration
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Created .env from .env.example — edit it with your configuration"; else echo ".env already exists — skipping"; fi
 
-run: ## Run agent locally with hot-reload
-	@set -a && source .env && set +a && \
+env: ## Create venv, load .env, and install dependencies
+	@echo "==> Creating virtual environment..." && \
+	  rm -rf .venv && \
+	  uv venv --python 3.12 && \
+	  echo "==> Load .env variables..." && \
+	  source .venv/bin/activate && set -a && source .env && set +a && \
+	  echo "==> Installing dependencies..." && \
+	  uv pip install -e . && \
+	  echo "" && \
+	  echo "Done. Next steps:" && \
+	  echo "  make ollama   # install Ollama and pull models" && \
+	  echo "  make llama-server    # start Llama Stack server"
+
+ollama: ## Install Ollama, start it, and pull models
+	@source .venv/bin/activate && set -a && source .env && set +a && \
+	if command -v ollama >/dev/null 2>&1; then \
+	  echo "==> Ollama already installed, skipping..."; \
+	else \
+	  echo "==> Installing Ollama..." && \
+	  curl -fsSL https://ollama.com/install.sh | sh; \
+	fi && \
+	  echo "==> Starting Ollama service..." && \
+	  ollama serve &>/dev/null & \
+	  echo "Waiting for Ollama to be ready..." && \
+	  until ollama list >/dev/null 2>&1; do sleep 1; done && \
+	  echo "==> Pulling llama3.2:3b..." && \
+	  ollama pull llama3.2:3b && \
+	  echo "==> Pulling embeddinggemma:latest..." && \
+	  ollama pull embeddinggemma:latest && \
+	  echo "==> Creating Milvus dir..." && \
+	  mkdir -p ../../../milvus_data && \
+	  echo "" && \
+	  echo "Done. Run 'make llama' to start the Llama Stack server."
+
+llama-server: ## Start Llama Stack server
+	@source .venv/bin/activate && set -a && source .env && set +a && \
+	  echo "==> Killing any existing process on port 8321..." && \
+	  lsof -ti:8321 | xargs kill -9 2>/dev/null; true && \
+	  echo "==> Starting Llama Stack server on port 8321..." && \
+	  llama stack run ../../../run_llama_server.yaml
+
+run-app: ## Run agent locally with hot-reload
+	@source .venv/bin/activate && set -a && source .env && set +a && \
+	  lsof -ti:$${PORT:-8000} | xargs kill -9 2>/dev/null; true && \
 	  uv run uvicorn main:app --host 0.0.0.0 --port $${PORT:-8000} --reload --reload-exclude .venv
 
 run-cli: ## Run interactive CLI chat (no web server)
-	@set -a && source .env && set +a && \
+	@source .venv/bin/activate && set -a && source .env && set +a && \
+	  lsof -ti:8000 | xargs kill -9 2>/dev/null; true && \
 	  cd examples && uv run python execute_ai_service_locally.py
 
 build: ## Build container image locally (podman/docker)

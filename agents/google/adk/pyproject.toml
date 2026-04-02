@@ -14,6 +14,13 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "setuptools>=80.9.0,<82.0.0",
     "flask>=3.1.0",
+    "llama-stack>0.4.0,<=0.5.0",
+    "llama-stack-api<=0.5.0",
+    "ollama",
+    "pymilvus>=2.4.10",
+    "milvus-lite>=2.5.1",
+    "chardet",
+    "pypdf",
 ]
 
 [project.optional-dependencies]
