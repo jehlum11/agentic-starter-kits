@@ -55,19 +55,29 @@ sudo systemctl start podman     # start the podman service
 ```bash
 cd agents/langflow/simple_tool_calling_agent
 make init        # creates local/.env from .env.example, generates Langfuse secrets
+make run         # starts Langflow + PostgreSQL + Langfuse v3 (ClickHouse, MinIO, Redis)
 ```
+
+### Import the flow
+
+1. Open http://localhost:7860
+2. On first launch, Langflow asks you to create a flow — create a **Blank Flow** (this is just to get past the initial screen)
+3. Click the **Langflow icon** (top left) to go to the projects page
+4. Click **Upload Flow** and select `flows/outdoor-activity-agent.json`
 
 ### Configuration
 
+Configure the flow components:
+
+| Component | Field | Value |
+|-----------|-------|-------|
+| KServe vLLM | api_base | http://host.containers.internal:8321/v1 |
+| KServe vLLM | model_name | ollama/qwen2.5:7b |
+| KServe vLLM | api_key | not-needed |
+| NPS Search Parks | api_key | Get one free at https://developer.nps.gov |
+| NPS Park Alerts | api_key | Same NPS key as above |
+
 #### Pointing to a locally hosted model
-
-After importing the flow (see [Running the Agent](#running-the-agent)), set these values in the **KServe vLLM** component:
-
-| Field | Value |
-|-------|-------|
-| api_base | http://host.containers.internal:8321/v1 |
-| model_name | ollama/qwen2.5:7b |
-| api_key | not-needed |
 
 See [Local Development](../../../docs/local-development.md) for Ollama + Llama Stack setup for local model serving.
 
@@ -86,6 +96,10 @@ Update the **KServe vLLM** component in the Langflow UI:
 | model_name | your-model-id |
 | api_key | your-api-key |
 
+### Running the Agent
+
+Run the agent from the Langflow UI by clicking the **Play** button.
+
 ### Tracing
 
 Langfuse v3 tracing is included in the local stack and starts automatically. No additional setup needed.
@@ -94,29 +108,6 @@ Langfuse v3 tracing is included in the local stack and starts automatically. No 
 - **Login**: admin@langflow.local / password auto-generated in `local/.env`
 
 After running the agent, select the **Langflow Agent** project and click **Traces** to see agent executions — LLM calls, tool invocations, inputs, and outputs.
-
-### Running the Agent
-
-```bash
-make run         # starts Langflow + PostgreSQL + Langfuse v3 (ClickHouse, MinIO, Redis)
-```
-
-#### Import and configure the flow
-
-1. Open http://localhost:7860
-2. On first launch, Langflow asks you to create a flow — create a **Blank Flow** (this is just to get past the initial screen)
-3. Click the **Langflow icon** (top left) to go to the projects page
-4. Click **Upload Flow** and select `flows/outdoor-activity-agent.json`
-5. Configure the flow components:
-
-   | Component | Field | Value |
-   |-----------|-------|-------|
-   | KServe vLLM | api_base | http://host.containers.internal:8321/v1 |
-   | KServe vLLM | model_name | ollama/qwen2.5:7b |
-   | KServe vLLM | api_key | not-needed |
-   | NPS Search Parks | api_key | Get one free at https://developer.nps.gov |
-   | NPS Park Alerts | api_key | Same NPS key as above |
-6. Run the agent from the Langflow UI
 
 #### Stopping the stack
 
