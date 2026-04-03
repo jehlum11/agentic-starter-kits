@@ -1,12 +1,12 @@
 """
-Playground UI for the LangGraph Human-in-the-Loop Agent.
+Playground UI for the Google ADK Agent.
 
 A simple Flask chat interface that proxies requests to the agent's
-/chat/completions endpoint with streaming and HITL approval support.
+/chat/completions endpoint with streaming support.
 
 Usage:
     # Make sure the agent is running first (default: http://localhost:8000)
-    cd agents/langgraph/human_in_the_loop
+    cd agents/google/adk
     flask --app playground/app run --port 5001
 
     # Or with a custom agent URL:
@@ -71,28 +71,20 @@ def health():
 
 @app.route("/chat/completions", methods=["POST"])
 def chat():
-    """Proxy chat requests to the agent with streaming and HITL support."""
+    """Proxy chat requests to the agent with streaming."""
     data = request.get_json() or {}
     messages = data.get("messages", [])
-    thread_id = data.get("thread_id")
-    approval = data.get("approval")
 
     payload = {
         "messages": messages,
         "stream": True,
     }
-    if thread_id:
-        payload["thread_id"] = thread_id
-    if approval:
-        payload["approval"] = approval
 
     logger.info(
-        "Sending request to %s/chat/completions (messages=%d, stream=%s, thread_id=%s, approval=%s)",
+        "Sending request to %s/chat/completions (messages=%d, stream=%s)",
         AGENT_URL,
         len(messages),
         payload.get("stream"),
-        thread_id,
-        approval,
     )
 
     def generate():
