@@ -1,5 +1,7 @@
 <div style="text-align: center;">
 
+<img src="/images/adk_logo.png" alt="Google ADK logo" width="100" height="100">
+
 # Google ADK 2.0 Agent
 
 </div>
