@@ -1,5 +1,4 @@
 SHELL          := bash
-AGENT_NAME     := $(shell python3 -c "import re; print(re.search(r'^name:\s*(.+)', open('agent.yaml').read(), re.M).group(1).strip())")
 COMPOSE_FILE   := local/podman-compose.yml
 ENV_FILE       := local/.env
 
@@ -37,7 +36,7 @@ clean: ## Stop services and remove all data
 	@./cleanup-local.sh --force
 
 status: ## Show status of running services
-	@cd local && podman-compose ps
+	@podman-compose -f $(COMPOSE_FILE) ps
 
 logs: ## Tail logs from all services
-	@cd local && podman-compose logs -f
+	@podman-compose -f $(COMPOSE_FILE) logs -f

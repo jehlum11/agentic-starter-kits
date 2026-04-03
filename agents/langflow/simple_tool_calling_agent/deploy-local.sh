@@ -20,25 +20,10 @@ if ! command -v podman-compose &>/dev/null; then
   exit 1
 fi
 
-# Copy .env if it doesn't exist
+# Ensure init has been run
 if [ ! -f "$LOCAL_DIR/.env" ]; then
-  cp "$SCRIPT_DIR/.env.example" "$LOCAL_DIR/.env"
-  echo "Created .env from .env.example"
-fi
-
-# Generate Langfuse secrets if not already set
-if ! grep -q '^LANGFUSE_ADMIN_PASSWORD=.\+' "$LOCAL_DIR/.env" 2>/dev/null; then
-  GENERATED_PWD=$(openssl rand -base64 12)
-  sed -i.bak "s/^LANGFUSE_ADMIN_PASSWORD=.*/LANGFUSE_ADMIN_PASSWORD=$GENERATED_PWD/" "$LOCAL_DIR/.env"
-  rm -f "$LOCAL_DIR/.env.bak"
-  echo "Generated Langfuse admin password."
-fi
-
-if ! grep -q '^LANGFUSE_ENCRYPTION_KEY=.\+' "$LOCAL_DIR/.env" 2>/dev/null; then
-  GENERATED_KEY=$(openssl rand -hex 32)
-  sed -i.bak "s/^LANGFUSE_ENCRYPTION_KEY=.*/LANGFUSE_ENCRYPTION_KEY=$GENERATED_KEY/" "$LOCAL_DIR/.env"
-  rm -f "$LOCAL_DIR/.env.bak"
-  echo "Generated Langfuse encryption key."
+  echo "ERROR: local/.env not found. Run 'make init' first."
+  exit 1
 fi
 
 cd "$LOCAL_DIR" || { echo "ERROR: Directory $LOCAL_DIR not found."; exit 1; }
