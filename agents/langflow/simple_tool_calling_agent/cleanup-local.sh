@@ -7,17 +7,6 @@ LOCAL_DIR="$SCRIPT_DIR/local"
 
 cd "$LOCAL_DIR" || { echo "ERROR: Directory $LOCAL_DIR not found."; exit 1; }
 
-stop_ollama() {
-  if pgrep -f "ollama serve" >/dev/null 2>&1; then
-    pkill -f "ollama serve" || true
-    if pgrep -f "ollama serve" >/dev/null 2>&1; then
-      echo "WARNING: Could not stop Ollama. Stop it manually: pkill -f 'ollama serve'"
-    else
-      echo "Ollama stopped."
-    fi
-  fi
-}
-
 if [ "${1:-}" = "--force" ]; then
   echo "Stopping services and removing all data..."
   # Stop containerized services
@@ -32,16 +21,11 @@ if [ "${1:-}" = "--force" ]; then
   done
   # Remove project network
   podman network rm local_default || true
-  # Stop native Ollama
-  stop_ollama
   # Clean up config
-  rm -f "$LOCAL_DIR/.ollama-enabled"
   rm -f "$LOCAL_DIR/.env"
   echo "Done. All services stopped and data removed."
 else
   echo "Stopping services (data preserved)..."
   podman-compose down --remove-orphans || true
-  # Stop native Ollama
-  stop_ollama
-  echo "Done. Run './deploy-local.sh' to start again."
+  echo "Done. Run 'make run' to start again."
 fi

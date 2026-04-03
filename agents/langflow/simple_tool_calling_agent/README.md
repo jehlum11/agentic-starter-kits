@@ -1,6 +1,6 @@
 <div style="text-align: center;">
 
-# Langflow Simple Tool Calling Agent
+# Simple Tool Calling Agent
 
 </div>
 
@@ -8,11 +8,7 @@
 
 ## What this agent does
 
-A tool-calling agent built with Langflow's visual flow builder. It calls external APIs as tools (weather forecasts, national park data) and reasons over the results to answer user questions. Includes Langfuse v3 tracing out of the box. Runs locally via `podman-compose`.
-
-### Included demo flow
-
-The shipped flow is an outdoor activity assistant — it checks weather conditions and national park alerts to help decide if conditions are good for outdoor activities.
+Tool-calling agent built with Langflow's visual flow builder. It calls external APIs as tools (weather forecasts, national park data) and reasons over the results to answer user questions. Includes Langfuse v3 tracing out of the box.
 
 **Example queries:**
 - *"Can I go walking in Boston tomorrow at 3 PM?"*
@@ -26,103 +22,115 @@ The shipped flow is an outdoor activity assistant — it checks weather conditio
 | NPS Search Parks | NPS API | Search national parks by state |
 | NPS Park Alerts | NPS API | Active alerts and closures for a park |
 
+> **Note:** Unlike other agents in this repo, Langflow agents do not deploy a custom container. The "agent" is a JSON flow definition imported into an existing Langflow instance. There is no Dockerfile, Helm chart, or FastAPI application.
+
 ---
 
-## Run locally
+## Prerequisites
 
-### Prerequisites
+- [Podman](https://podman.io/) + [podman-compose](https://github.com/containers/podman-compose) — for running the local stack
+- [GNU Make](https://www.gnu.org/software/make/) and a bash-compatible shell — on Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (recommended) or [Git Bash](https://git-scm.com/downloads)
 
-- **Podman** + **podman-compose** installed
+### Installing Podman
 
-  **macOS:**
-  ```bash
-  brew install podman             # install podman runtime
-  brew install podman-compose     # install compose plugin
-  podman machine init             # create a Linux VM (podman runs containers in a VM on macOS)
-  podman machine start            # start the VM
-  ```
+**macOS:**
+```bash
+brew install podman             # install podman runtime
+brew install podman-compose     # install compose plugin
+podman machine init             # create a Linux VM (podman runs containers in a VM on macOS)
+podman machine start            # start the VM
+```
 
-  **Linux:**
-  ```bash
-  sudo dnf install -y podman      # install podman runtime
-  pip install podman-compose      # install compose plugin
-  sudo systemctl start podman     # start the podman service
-  ```
+**Linux:**
+```bash
+sudo dnf install -y podman      # install podman runtime
+pip install podman-compose      # install compose plugin
+sudo systemctl start podman     # start the podman service
+```
 
-### Start the local stack
+## Deploying Locally
+
+### Setup
 
 ```bash
 cd agents/langflow/simple_tool_calling_agent
-chmod +x deploy-local.sh cleanup-local.sh
-./deploy-local.sh
+make init        # creates local/.env from .env.example, generates Langfuse secrets
+make run         # starts Langflow + PostgreSQL + Langfuse v3 (ClickHouse, MinIO, Redis)
 ```
 
-This starts:
-- **Langflow** on http://localhost:7860 — the agent UI
-- **PostgreSQL** — shared database server. Hosts two databases: `langflow` (flows, users, settings) and `langfuse` (metadata). The `langflow` database is created automatically by PostgreSQL; the `langfuse` database is created by `local/init-db.sh` on first startup
-- **Ollama** on http://localhost:11434 — local LLM (qwen2.5:7b), runs natively on host for GPU acceleration
-- **Langfuse v3** on http://localhost:3000 — tracing (admin@langflow.local / password auto-generated in `local/.env`), backed by ClickHouse, MinIO, and Redis
-
-### Import and configure the flow
+### Import the flow
 
 1. Open http://localhost:7860
 2. On first launch, Langflow asks you to create a flow — create a **Blank Flow** (this is just to get past the initial screen)
 3. Click the **Langflow icon** (top left) to go to the projects page
 4. Click **Upload Flow** and select `flows/outdoor-activity-agent.json`
-5. Configure the flow components:
 
-   | Component | Field | Value |
-   |-----------|-------|-------|
-   | KServe vLLM | api_base | http://host.containers.internal:11434/v1 |
-   | KServe vLLM | model_name | qwen2.5:7b |
-   | KServe vLLM | api_key | dummy |
-   | NPS Search Parks | api_key | Get one free at https://developer.nps.gov |
-   | NPS Park Alerts | api_key | Same NPS key as above |
-6. Run the agent from the Langflow UI
+### Configuration
 
-> **Note:** Ollama runs natively on your machine (not in a container) to leverage GPU acceleration. On Apple Silicon Macs, this uses Metal for faster inference. Response times vary by hardware — expect 30 seconds to a few minutes per tool call. For faster responses, point the agent to a GPU-backed cluster endpoint (see [Remote model](#remote-model-instead-of-ollama)).
+Configure the flow components:
 
-### Query the agent via API
+| Component | Field | Value |
+|-----------|-------|-------|
+| KServe vLLM | api_base | http://host.containers.internal:8321/v1 |
+| KServe vLLM | model_name | ollama/qwen2.5:7b |
+| KServe vLLM | api_key | not-needed |
+| NPS Search Parks | api_key | Get one free at https://developer.nps.gov |
+| NPS Park Alerts | api_key | Same NPS key as above |
 
-Once the flow is running, you can query it via the Langflow API:
+#### Pointing to a locally hosted model
+
+See [Local Development](../../../docs/local-development.md) for Ollama + Llama Stack setup for local model serving.
+
+**Notes:**
+- `api_base` — use `host.containers.internal` instead of `localhost` so containerized Langflow can reach Llama Stack running on the host
+- `api_key` — Llama Stack doesn't require authentication, so any non-empty string works
+- `model_name` — not all models handle tool calling well. `qwen2.5:7b` and `llama3.1:8b` are known to work
+
+#### Pointing to a remotely hosted model
+
+Update the **KServe vLLM** component in the Langflow UI:
+
+| Field | Value |
+|-------|-------|
+| api_base | your-model-endpoint/v1 |
+| model_name | your-model-id |
+| api_key | your-api-key |
+
+### Running the Agent
+
+Run the agent from the Langflow UI by clicking the **Play** button.
+
+### Tracing
+
+Langfuse v3 tracing is included in the local stack and starts automatically. No additional setup needed.
+
+- **Langfuse UI**: http://localhost:3000
+- **Login**: admin@langflow.local / password auto-generated in `local/.env`
+
+After running the agent, select the **Langflow Agent** project and click **Traces** to see agent executions — LLM calls, tool invocations, inputs, and outputs.
+
+#### Stopping the stack
 
 ```bash
-curl -X POST http://localhost:7860/api/v1/run/<flow-id> \
-  -H "Content-Type: application/json" \
-  -d '{"input_value": "What is the best day to hike near Denver?", "output_type": "chat", "input_type": "chat"}'
+make stop        # stop services, keep data
+make clean       # stop services, remove all data
 ```
 
-Replace `<flow-id>` with the flow ID from the Langflow UI. You can find it in the browser URL bar when you open the flow — e.g., `http://localhost:7860/flow/27e7203d-b2b1-4700-962a-144a66155f14` → the flow ID is `27e7203d-b2b1-4700-962a-144a66155f14`.
-
-On the cluster, replace `localhost:7860` with your cluster's Langflow route URL.
-
-### Stop the local stack
-
-```bash
-./cleanup-local.sh          # stop services, keep data
-./cleanup-local.sh --force  # stop services, remove all data
-```
-
-**What gets preserved vs wiped:**
-
-| Data | `cleanup-local.sh` | `cleanup-local.sh --force` |
-|------|---------------------|----------------------------|
-| Downloaded Ollama models (e.g., qwen2.5:7b) | Kept | Kept (stored on host, not in containers) |
+| Data | `make stop` | `make clean` |
+|------|-------------|--------------|
 | Imported Langflow flows | Kept | **Deleted** (re-import needed) |
 | Langfuse traces (ClickHouse + MinIO) | Kept | **Deleted** |
 | PostgreSQL data | Kept | **Deleted** |
 | Redis cache | Kept | **Deleted** |
-| `.env` and `.ollama-enabled` config | Kept | **Deleted** |
+| `local/.env` config | Kept | **Deleted** |
 
----
-
-## Deploy to cluster
+## Deploying to Cluster
 
 There is nothing to build or deploy — no Dockerfiles, no Helm charts, no k8s manifests. This agent assumes Langflow, Langfuse, and an LLM (LlamaStack/KServe) are already running on the cluster. You just import the flow JSON into the existing Langflow instance and configure it.
 
 ### Finding cluster endpoints
 
-Reach out to your cluster admin for the Langflow URL and LlamaStack endpoint/model names. However, if you have `oc` CLI access, you can find them yourself:
+Reach out to your cluster admin for the Langflow URL and LlamaStack endpoint/model names. If you have `oc` CLI access, you can find them yourself:
 
 ```bash
 # Langflow UI URL
@@ -153,85 +161,29 @@ oc get inferenceservice --all-namespaces
    - **NPS Park Alerts**: set `api_key` (same NPS key)
 4. Run the agent
 
+## API Endpoints
 
----
+### POST /api/v1/run/\<flow-id\>
 
-## Pointing agent to different models
+```bash
+curl -X POST http://localhost:7860/api/v1/run/<flow-id> \
+  -H "Content-Type: application/json" \
+  -d '{"input_value": "What is the best day to hike near Denver?", "output_type": "chat", "input_type": "chat"}'
+```
 
-### Local model (Ollama)
+Replace `<flow-id>` with the flow ID from the Langflow UI. You can find it in the browser URL bar when you open the flow — e.g., `http://localhost:7860/flow/27e7203d-b2b1-4700-962a-144a66155f14` → the flow ID is `27e7203d-b2b1-4700-962a-144a66155f14`.
 
-By default, the local stack runs **qwen2.5:7b** on Ollama. After importing the flow, set these values in the **KServe vLLM** component:
+On the cluster, replace `localhost:7860` with your cluster's Langflow route URL.
 
-| Field | Value |
-|-------|-------|
-| api_base | http://host.containers.internal:11434/v1 |
-| model_name | qwen2.5:7b |
-| api_key | dummy |
-
-> Ollama runs natively on your host machine (not in a container) for GPU acceleration. Use `host.containers.internal` so containerized Langflow can reach it. Ollama doesn't require authentication, so api_key can be any non-empty string (e.g., dummy).
-
-If you want to use a different model:
-
-1. Pull the model on Ollama:
-   ```bash
-   ollama pull <model-name>
-   ```
-   Or edit `local/.env` to change the default model and restart:
-   ```
-   OLLAMA_MODEL=llama3.1:8b
-   ```
-   Then: `./cleanup-local.sh && ./deploy-local.sh`
-
-2. Update the **KServe vLLM** component in the Langflow UI:
-
-   | Field | Value |
-   |-------|-------|
-   | api_base | http://host.containers.internal:11434/v1 |
-   | model_name | your-model-name |
-
-> **Note:** Make sure you have enough CPU/GPU resources locally to run the model. Also, not all models handle tool calling well — for example, smaller models like Llama 3.2 1B may fail at tool calling, causing connection errors when the agent tries to invoke tools. Models like `qwen2.5:7b` and `llama3.1:8b` are known to work well with tool calling.
-
-### Remote model (instead of Ollama)
-
-If you primarily work with a remote model endpoint, or don't have enough local CPU/GPU resources to host a model, you can skip installing Ollama entirely by answering **n** when prompted by `deploy-local.sh`.
-
-Then update the **KServe vLLM** component in the Langflow UI to point to your remote endpoint:
-
-| Field | Value |
-|-------|-------|
-| api_base | your-model-endpoint/v1 |
-| model_name | your-model-id |
-| api_key | your-api-key |
-
----
-
-## Viewing traces in Langfuse
-
-After running the agent, traces are automatically sent to Langfuse.
-
-**Locally:**
-1. Open http://localhost:3000 (login: admin@langflow.local / password auto-generated in `local/.env`)
-2. Select the **Langflow Agent** project
-3. Click **Traces** in the left sidebar
-4. Click on any trace to see the full agent execution — LLM calls, tool invocations, inputs, and outputs
-
-**On cluster:**
-1. Open the Langfuse route on your cluster
-2. Select the **Langflow Agent** project
-3. Click **Traces** in the left sidebar
-
----
-
-## Exporting flows
+## Exporting Flows
 
 When exporting a flow from Langflow, API keys and secrets can be embedded in the exported JSON file. To avoid leaking secrets:
 
 1. In the export dialog, **uncheck "Save with API keys"** — this excludes all API keys from the exported file
 2. If you already exported with keys included, you can strip them manually by searching for `"api_key"` fields in the JSON and clearing their `"value"` entries
 
----
+## Resources
 
-## APIs Used
-
+- [Langflow Documentation](https://docs.langflow.org/)
 - [Open-Meteo](https://open-meteo.com/) — Weather and air quality (free, no key required)
 - [National Park Service API](https://developer.nps.gov) — Park search and alerts (free key required)
